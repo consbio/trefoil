@@ -8,11 +8,11 @@ Geospatial operations with NetCDF files and numpy arrays.
 We needed a library to consolidate a series of utility scripts and general
 geospatial operations on NetCDF and numpy arrays.  We found we were creating
 a lot of purpose built scripts for other projects involving lots of processing
-of NetCDF climate and model outputs; we have been pulling out general patterns
-and placing them here.  When we looked for existing work, we didn't find
-anything that quite met our needs, with a clean API and no strong assertions
-about data model or compliance with CF-conventions (we aspire to conventions,
-but not all data meet them).  
+of NetCDF climate and model outputs.  Where possible, we have been pulling out
+general patterns and placing them here.  When we looked for existing work, we 
+didn't find anything that quite met our needs, with a clean API and no strong 
+assertions about data model or compliance with CF-conventions 
+(we aspire to conventions, but not all data meet them).  
 
 Specifically, we want to provide:
 
@@ -31,7 +31,7 @@ living within clover.
 
 
 ## Where is it being used?
-This is a core dependency for ncdjango (public repo coming coon), our 
+This is a core dependency for ncdjango (public repo coming soon), our 
 Django-based NetCDF map server.
 
 
@@ -40,6 +40,7 @@ This is still under active development, as we have time and need.  All APIs are
 subject to change until we hit version 1.0.
 
 Specifically, we need to work on:
+
 * standardizing API patterns
 * documentation
 * test coverage and correctness
