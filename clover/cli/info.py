@@ -4,6 +4,7 @@ import click
 from netCDF4 import Dataset
 from clover.netcdf.describe import describe as describe_netcdf
 from clover.netcdf.utilities import collect_statistics, get_dtype_string
+from clover.cli import cli
 
 
 def print_dict(d, precision=2, depth=0):
@@ -22,12 +23,7 @@ def print_dict(d, precision=2, depth=0):
             print('{0}{1}: {2}'.format(space * depth, key, value))
 
 
-@click.group()
-def info():
-    pass
-
-
-@info.command()
+@cli.command(short_help='Describe netCDF files')
 @click.argument('files')
 def describe(files):
     """Describe netCDF datasets"""
@@ -48,7 +44,7 @@ def describe(files):
         print('')
 
 
-@info.command()
+@cli.command(short_help='List variables in netCDF file')
 @click.argument('filename', type=click.Path(exists=True))
 def variables(filename):
     ds = Dataset(filename)
@@ -68,7 +64,7 @@ def variables(filename):
         print('{0}({1})  dtype:{2}'.format(varname, len(ds.dimensions[varname]), get_dtype_string(variable)))
 
 
-@info.command()
+@cli.command(short_help='Display statistics for variables within netCDF files')
 @click.argument('files')
 @click.argument('variables')
 def stats(files, variables):
@@ -87,7 +83,3 @@ def stats(files, variables):
         print('## {0} ##'.format(variable))
         print_dict(statistics[variable])
         print('')
-
-
-if __name__ == '__main__':
-    info()

@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='clover',
-    version='0.1.0',
+    version='0.1.1',
     packages=['clover',
               'clover.analysis', 'clover.cli',
               'clover.geometry', 'clover.geometry.tests',
@@ -13,5 +13,9 @@ setup(
     license='see LICENSE',
     author='databasin',
     author_email='databasinadmin@consbio.org',
-    description='clover'
+    description='Useful tools for spatial analysis using numpy and NetCDF',
+    entry_points='''
+        [console_scripts]
+        clover=clover.cli.main:cli
+    '''
 )

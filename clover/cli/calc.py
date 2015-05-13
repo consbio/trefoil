@@ -4,6 +4,7 @@ import numpy
 import click
 from netCDF4 import Dataset
 from clover.netcdf.utilities import copy_variable_dimensions
+from clover.cli import cli
 
 
 def calculate_delta(baseline_data, comp_data, do_proportion=False):
@@ -14,12 +15,7 @@ def calculate_delta(baseline_data, comp_data, do_proportion=False):
         return dif / baseline_data  # TODO: fix cases of 0's in baseline data with very small value
 
 
-@click.group()
-def calc():
-    pass
-
-
-@calc.command()
+@cli.command(short_help='Calculate delta values into new datasets based on a baseline')
 @click.argument('baseline', type=click.Path(exists=True))
 @click.argument('files')
 @click.argument('variable')
@@ -27,7 +23,6 @@ def calc():
 @click.option('--proportion', is_flag=True, default=False, help='Use proportion instead of difference')
 @click.option('--outdir', default='./', help='Output directory')
 def delta(baseline, files, variable, bidx, proportion, outdir):
-
     if not os.path.exists(outdir):
         os.makedirs(outdir)
 
@@ -57,8 +52,3 @@ def delta(baseline, files, variable, bidx, proportion, outdir):
 
                     else:
                         out_var[:] = calculate_delta(baseline_data, comp_data, proportion)
-
-
-
-if __name__ == '__main__':
-    calc()

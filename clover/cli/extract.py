@@ -3,9 +3,10 @@ import glob
 import click
 from netCDF4 import Dataset
 from clover.netcdf.utilities import copy_variable
+from clover.cli import cli
 
 
-@click.command()
+@cli.command(short_help='Extract variables from files into new datasets in a new directory')
 @click.argument('files')
 @click.argument('variables')
 @click.argument('outdir')
@@ -36,8 +37,3 @@ def extract(files, variables, outdir, compress):
             with Dataset(os.path.join(outdir, os.path.split(filename)[1]), 'w') as outfile:
                 for variable in variables:
                     copy_variable(infile, outfile, variable, **kwargs)
-
-
-
-if __name__ == '__main__':
-    extract()

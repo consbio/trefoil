@@ -35,7 +35,7 @@ from clover.render.renderers.utilities import renderer_from_dict
 from clover.netcdf.utilities import collect_statistics
 from clover.netcdf.variable import SpatialCoordinateVariables
 from clover.netcdf.crs import get_crs
-
+from clover.cli import cli
 
 
 
@@ -55,7 +55,7 @@ def render_image(renderer, data, filename, scale=1, reproject_kwargs=None):
     img.save(filename)
 
 
-@click.command()
+@cli.command(short_help="Render netcdf files to images")
 @click.argument('filename_pattern')
 @click.argument('variable')
 @click.argument('output_directory', type=click.Path())
@@ -74,7 +74,7 @@ def render_image(renderer, data, filename, scale=1, reproject_kwargs=None):
 @click.option('--res', default=None, type=click.FLOAT, help='Destination pixel resolution in destination coordinate system units' )
 @click.option('--resampling', default='nearest', type=click.Choice(('nearest', 'cubic', 'lanczos', 'mode')), help='Resampling method for reprojection (default: nearest')
 # TODO: option with transform info if not a geo format
-def run(
+def render_netcdf(
         filename_pattern,
         variable,
         output_directory,
@@ -91,6 +91,7 @@ def run(
         dst_crs,
         res,
         resampling):
+    """Render netcdf files to images"""
 
     filenames = glob.glob(filename_pattern)
     if not filenames:
@@ -157,6 +158,14 @@ def run(
 
             data = ds.variables[variable][:]
 
+            # get transforms, assume last 2 dimensions on variable are spatial in row, col order
+            y_dim, x_dim = ds.variables[variable].dimensions[-2:]
+            y_len, x_len = data.shape[-2:]
+            coords = SpatialCoordinateVariables.from_dataset(ds, x_dim, y_dim)#, projection=Proj(src_crs))
+
+            if coords.y.is_ascending_order():
+                data = data[::-1]
+
             reproject_kwargs = None
             if dst_crs is not None:
                 # TODO: extract this out into a general clover reprojection function
@@ -165,16 +174,9 @@ def run(
                     raise click.BadParameter('must provide src_crs to reproject', param='src_crs', param_hint='src_crs')
 
                 src_crs = crs.from_string(ds_crs) if ds_crs else {'init': src_crs}
-                # if dst_crs.upper() == 'EPSG:3857':
-                #     # 3857 is not handled correctly during reprojection in this version of GDAL
-                #     dst_crs = crs.from_string('+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +a=6378137 +b=6378137 +units=m +no_defs')
-                # else:
-                dst_crs = {'init': dst_crs}
+                coords.projection = Proj(src_crs)
 
-                # get transforms, assume last 2 dimensions on variable are spatial in row, col order
-                y_dim, x_dim = ds.variables[variable].dimensions[-2:]
-                y_len, x_len = data.shape[-2:]
-                coords = SpatialCoordinateVariables.from_dataset(ds, x_dim, y_dim, projection=Proj(src_crs))
+                dst_crs = {'init': dst_crs}
 
                 proj_bbox = coords.bbox.project(Proj(dst_crs))
 
@@ -250,9 +252,3 @@ def run(
                     image_filename = os.path.join(output_directory,
                                                   '{0}__{1}.png'.format(filename_root, combined_id))
                     render_image(renderer, data[combined_index], image_filename, scale, reproject_kwargs=reproject_kwargs)
-
-
-
-
-if __name__ == '__main__':
-    run()
