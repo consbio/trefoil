@@ -99,7 +99,7 @@ def test_set_crs(tmpdir):
 
     # Unsupported projection should fail
     proj4 = '+proj=merc +lat_1=30 +lat_2=60 +lat_0=47.5 +lon_0=-97 +x_0=3825000 +y_0=3200000'
-    data_var = ds.createVariable('data3', 'S1')
+    ds.createVariable('data3', 'S1')
     with pytest.raises(ValueError):
         set_crs(ds, 'data3', Proj(proj4))
 
@@ -109,7 +109,7 @@ def test_symmetric_proj4(tmpdir):
 
     ds = Dataset(str(tmpdir.join('test.nc')), 'w')
     proj4 = '+proj=stere +datum=WGS84 +lat_ts=60 +lat_0=90 +lon_0=263 +lat_1=60 +x_0=3475000 +y_0=7475000'
-    data_var = ds.createVariable('data', 'S1')
+    ds.createVariable('data', 'S1')
     set_crs(ds, 'data', Proj(proj4), set_proj4_att=True)
     out_proj4 = get_crs(ds, 'data')
 
@@ -119,3 +119,16 @@ def test_symmetric_proj4(tmpdir):
     assert len(out_data) == 9  # There should be 9 parameters
     assert not set(in_data).difference(out_data)
 
+
+def test_utm(tmpdir):
+    ds = Dataset(str(tmpdir.join('test.nc')), 'w')
+    proj4 = '+init=epsg:3157'  # UTM Zone 10
+    ds.createVariable('data', 'S1')
+    set_crs(ds, 'data', Proj(proj4), set_proj4_att=True)
+    out_proj4 = get_crs(ds, 'data')
+
+    in_data = crs_utils.from_string(proj4)
+    out_data = crs_utils.from_string(out_proj4)
+
+    assert len(out_data) == 2  # There should be 2 parameters: init, units
+    assert not set(in_data).difference(out_data)

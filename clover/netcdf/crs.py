@@ -46,7 +46,8 @@ PROJ4_CF_NAMES = {
     'latlong': 'latitude_longitude',
     'lcc': 'lambert_conformal_conic',
     'stere': 'polar_stereographic',
-    'tmerc': 'transverse_mercator'
+    'tmerc': 'transverse_mercator',
+    'utm': 'universal_transverse_mercator'
 }
 
 PROJ4_CF_PARAM_MAP = {
@@ -79,6 +80,9 @@ PROJ4_CF_PARAM_MAP = {
         'lon_0': 'longitude_of_central_meridian',
         'x_0': 'false_easting',
         'y_0': 'false_northing'
+    },
+    'utm': {
+        'zone': 'utm_zone_number'
     }
 }
 
