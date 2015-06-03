@@ -34,9 +34,29 @@ from clover.render.renderers.stretched import StretchedRenderer
 from clover.render.renderers.utilities import renderer_from_dict
 from clover.netcdf.utilities import collect_statistics
 from clover.netcdf.variable import SpatialCoordinateVariables
+from clover.geometry.bbox import BBox
 from clover.netcdf.crs import get_crs
 from clover.cli import cli
 
+
+def _colormap_to_stretched_renderer(colormap, colorspace='hsv', filenames=None, variable=None):
+    statistics = None
+    if 'min:' in colormap or 'max:' in colormap or 'mean' in colormap:
+        if not filenames and variable:
+            raise ValueError('filenames and variable are required inputs to use colormap with statistics')
+        statistics = collect_statistics(filenames, (variable,))[variable]
+
+    colors = []
+    for entry in colormap.split(','):
+        value, color = entry.split(':')
+        # TODO: add proportions of statistics
+        if value in ('min', 'max', 'mean'):
+            value = statistics[value]
+        else:
+            value = float(value)
+        colors.append((value, Color.from_hex(color)))
+
+    return StretchedRenderer(colors, colorspace=colorspace)
 
 
 def render_image(renderer, data, filename, scale=1, reproject_kwargs=None):
@@ -59,7 +79,8 @@ def render_image(renderer, data, filename, scale=1, reproject_kwargs=None):
 @click.argument('filename_pattern')
 @click.argument('variable')
 @click.argument('output_directory', type=click.Path())
-@click.option('--renderer_file', help='File containing renderer JSON', type=click.File('r'))
+@click.option('--renderer_file', help='File containing renderer JSON', type=click.Path())
+@click.option('--save', default=False, is_flag=True, help='Save renderer to renderer_file')
 @click.option('--renderer_type', default='stretched', help='Name of renderer [default: stretched].  (other types not yet implemented)')
 @click.option('--colormap', default='min:#000000,max:#FFFFFF', help='Provide colormap as comma-separated lookup of value to hex color code.  (Example: -1:#FF0000,1:#0000FF) [default: min:#000000,max:#FFFFFF]')
 @click.option('--colorspace', default='hsv', type=click.Choice(['hsv', 'rgb']), help='Color interpolation colorspace')
@@ -73,12 +94,14 @@ def render_image(renderer, data, filename, scale=1, reproject_kwargs=None):
 @click.option('--dst_crs', default=None, type=click.STRING, help='Destination coordinate reference system')
 @click.option('--res', default=None, type=click.FLOAT, help='Destination pixel resolution in destination coordinate system units' )
 @click.option('--resampling', default='nearest', type=click.Choice(('nearest', 'cubic', 'lanczos', 'mode')), help='Resampling method for reprojection (default: nearest')
+@click.option('--anchors', default=False, is_flag=True, help='Print anchor coordinates for use in Leaflet ImageOverlay')
 # TODO: option with transform info if not a geo format
 def render_netcdf(
         filename_pattern,
         variable,
         output_directory,
         renderer_file,
+        save,
         renderer_type,
         colormap,
         colorspace,
@@ -90,8 +113,13 @@ def render_netcdf(
         src_crs,
         dst_crs,
         res,
-        resampling):
-    """Render netcdf files to images"""
+        resampling,
+        anchors):
+    """
+    Render netcdf files to images.
+
+    colormap is ignored if renderer_file is provided
+    """
 
     filenames = glob.glob(filename_pattern)
     if not filenames:
@@ -100,9 +128,12 @@ def render_netcdf(
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
 
-    if renderer_file is not None:
+    if renderer_file is not None and not save:
+        if not os.path.exists(renderer_file):
+            raise click.BadParameter('does not exist', param='renderer_file', param_hint='renderer_file')
+
         # see https://bitbucket.org/databasin/ncdjango/wiki/Home for format
-        renderer_dict = json.loads(renderer_file.read())
+        renderer_dict = json.loads(open(renderer_file).read())
 
         if variable in renderer_dict and not 'colors' in renderer_dict:
             renderer_dict = renderer_dict[variable]
@@ -123,23 +154,24 @@ def render_netcdf(
 
     else:
         if renderer_type == 'stretched':
-            statistics = None
-            if 'min:' in colormap or 'max:' in colormap or 'mean' in colormap:
-                statistics = collect_statistics(filenames, (variable,))[variable]
-
-            colors = []
-            for entry in colormap.split(','):
-                value, color = entry.split(':')
-                # TODO: add proportions of statistics
-                if value in ('min', 'max', 'mean'):
-                    value = statistics[value]
-                else:
-                    value = float(value)
-                colors.append((value, Color.from_hex(color)))
-            renderer = StretchedRenderer(colors, colorspace=colorspace)
-
+            renderer = _colormap_to_stretched_renderer(colormap, colorspace, filenames, variable)
         else:
             raise NotImplementedError('other renderers not yet built')
+
+    if save:
+        if not renderer_file:
+            raise click.BadParameter('must be provided to save', param='renderer_file', param_hint='renderer_file')
+
+        if os.path.exists(renderer_file):
+            with open(renderer_file, 'r+') as output_file:
+                data = json.loads(output_file.read())
+                output_file.seek(0)
+                output_file.truncate()
+                data[variable] = renderer.serialize()
+                output_file.write(json.dumps(data, indent=4))
+        else:
+            with open(renderer_file, 'w') as output_file:
+                output_file.write(json.dumps({variable: renderer.serialize()}))
 
     if legend_ticks is not None and not legend_breaks:
         legend_ticks = [float(v) for v in legend_ticks.split(',')]
@@ -194,6 +226,7 @@ def render_netcdf(
                     max(int(ceil(x_dif / cellsize)), 1)  # width
                 )
 
+                # TODO: replace with method in rasterio
                 reproject_kwargs = {
                     'src_crs': src_crs,
                     'src_transform': coords.affine,
@@ -202,6 +235,14 @@ def render_netcdf(
                     'resampling': getattr(RESAMPLING, resampling),
                     'dst_shape': dst_shape
                 }
+
+                if anchors:
+                    # Reproject the bbox of the output to WGS84
+                    full_bbox = BBox((dst_affine.c, dst_affine.f + dst_affine.e * dst_shape[0],
+                                     dst_affine.c + dst_affine.a * dst_shape[1], dst_affine.f),
+                                     projection=Proj(dst_crs))
+                    wgs84_bbox = full_bbox.project(Proj(init='EPSG:4326'))
+                    print('WGS84 Anchors: {0}'.format([[wgs84_bbox.ymin, wgs84_bbox.xmin], [wgs84_bbox.ymax, wgs84_bbox.xmax]]))
 
             num_dimensions = len(data.shape)
             if num_dimensions == 2:

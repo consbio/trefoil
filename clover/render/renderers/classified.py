@@ -1,5 +1,8 @@
-from . import *
+from PIL import Image
+import numpy
+
 from clover.utilities.format import PrecisionFormatter
+from clover.render.renderers import RasterRenderer
 from clover.render.renderers.legend import LegendElement
 
 LEGEND_TICK_POSITION = 0.5  # center-aligned with legend image

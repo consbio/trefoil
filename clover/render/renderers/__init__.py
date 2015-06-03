@@ -1,3 +1,4 @@
+import json
 from PIL import Image
 import numpy
 
@@ -28,15 +29,11 @@ class RasterRenderer(object):
         self.values = numpy.array([entry[0] for entry in self.colormap])
         self._generate_palette()
 
-
     def get_legend(self, image_width=20, image_height=20):
         raise NotImplementedError("Must be provided by child class")
 
-
     def render_image(self, data, row_major_order=True):
         raise NotImplementedError("Must be provided by child class")
-
-
 
     def _generate_palette(self):
         """
@@ -44,7 +41,6 @@ class RasterRenderer(object):
         """
 
         raise NotImplementedError("Must be provided by child class")
-
 
     def _mask_fill_value(self, data):
         """
@@ -79,38 +75,18 @@ class RasterRenderer(object):
         image.putalpha(Image.frombuffer("L", image.size, (mask * 255).astype(numpy.uint8), "raw", "L", 0, 1))
         return image
 
-#
-# class RendererManager:
-#     '''Class to manage available renderers.'''
-#
-#     @staticmethod
-#     def getRendererHash(rendererId, args):
-#         '''Get a unique hash for the given rendering information.
-#
-#         Useful for caching without loading the named renderer.
-#
-#         Arguments:
-#         rendererId -- The renderer id.
-#         args -- A dictionary of keyword arguments to be given to the renderer.
-#         '''
-#
-#         m = hashlib.md5()
-#
-#         m.update(rendererId)
-#         for key in args:
-#             m.update(key + "=")
-#             m.update(str(args[key]))
-#
-#         return m.hexdigest()
-#
-#     def __init__(self):
-#         '''Constructor. Loads a list of available renderers.'''
-#
-#         self.renderers = { }
-#
-#         path = os.path.join(os.path.dirname(__file__), "renderers")
-#         for name in os.listdir(path):
-#             if len(name) > 3 and name[-3:].lower() == ".py" and not os.path.isdir(name) and name.lower() != "__init__.py":
-#                 module = __import__("ncserve.base.renderers", fromlist=[name[:-3]]).__dict__[name[:-3]]
-#                 renderer = module.getRendererClass()
-#                 self.renderers[renderer.id] = renderer
+    def serialize(self):
+        """ Returns self as a dictionary """
+        ret = {
+            "type": self.__class__.__name__.lower().replace('renderer', ''),
+            "colors": [(entry[0], entry[1].to_hex()) for entry in self.colormap]
+        }
+        if self.fill_value is not None:
+            ret['fill_value'] = self.fill_value
+
+        return ret
+
+    def to_json(self, indent=4):
+        """ Returns self serialized to JSON """
+
+        return json.dumps(self.serialize(), indent=indent)

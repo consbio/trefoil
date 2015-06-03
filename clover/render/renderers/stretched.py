@@ -1,6 +1,9 @@
-from . import *
+from PIL import Image
+import numpy
+
 from clover.utilities.format import PrecisionFormatter
 from clover.utilities.color import interpolate_linear
+from clover.render.renderers import RasterRenderer
 from clover.render.renderers.legend import LegendElement
 
 
@@ -22,7 +25,6 @@ class StretchedRenderer(RasterRenderer):
         self.method = method
         self.colorspace = colorspace
         super(StretchedRenderer, self).__init__(colormap, fill_value, background_color)
-
 
     def get_legend(self, image_width=20, image_height=100, ticks=None, breaks=None, max_precision=6, discrete_images=False):
         """
@@ -76,7 +78,6 @@ class StretchedRenderer(RasterRenderer):
         else:
             raise NotImplementedError("Legends not built for other stretched renderer methods")
 
-
     def render_image(self, data, row_major_order=True):
         num_colors = self.palette.shape[0]
         factor = float(num_colors) / float(self.max_value - self.min_value)
@@ -97,7 +98,6 @@ class StretchedRenderer(RasterRenderer):
 
         return img
 
-
     def _generate_palette(self):
         self.min_value = self.colormap[0][0]
         self.max_value = self.colormap[len(self.colormap)-1][0]
@@ -111,3 +111,7 @@ class StretchedRenderer(RasterRenderer):
         else:
             raise NotImplementedError("Other stretched render methods not built!")
 
+    def serialize(self):
+        ret = super(StretchedRenderer, self).serialize()
+        ret['color_space'] = self.colorspace
+        return ret
