@@ -37,7 +37,13 @@ class Color(object):
         return tuple(values)
 
     def to_hex(self):
-        return ('#%02x%02x%02x' % (self.red, self.green, self.blue)).upper()
+        s = ''.join('{:02x}'.format(x) for x in (self.red, self.green, self.blue))
+
+        # Use short form if possible
+        if all((s[i] == s[i+1] for i in (0, 2, 4))):
+            s = ''.join((s[0], s[2], s[4]))
+
+        return '#{0}'.format(s).upper()
 
     def to_float(self):
         factor = 1.0 / float(2**self.bits - 1)
