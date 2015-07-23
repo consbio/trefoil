@@ -6,3 +6,4 @@ six
 rasterio>=0.21
 click
 pytz
+palettable

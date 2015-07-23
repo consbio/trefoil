@@ -8,10 +8,7 @@ max (calculate max across datasets)
 """
 
 
-# import sys
-# import logging
-# logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
-
+import importlib
 import os
 import glob
 from itertools import product
@@ -59,6 +56,41 @@ def _colormap_to_stretched_renderer(colormap, colorspace='hsv', filenames=None, 
     return StretchedRenderer(colors, colorspace=colorspace)
 
 
+def _palette_to_stretched_renderer(palette_path, values, filenames=None, variable=None):
+    index = palette_path.rindex('.')
+    palette = getattr(importlib.import_module('palettable.' + palette_path[:index]), palette_path[index+1:])
+
+    values = values.split(',')
+    if not len(values) > 1:
+        raise ValueError('Must provide at least 2 values for palette-based stretched renderer')
+
+    statistics = None
+    if 'min' in values or 'max' in values:
+        if not filenames and variable:
+            raise ValueError('filenames and variable are required inputs to use palette with statistics')
+        statistics = collect_statistics(filenames, (variable,))[variable]
+
+        for statistic in ('min', 'max'):
+            if statistic in values:
+                values[values.index(statistic)] = statistics[statistic]
+
+    hex_colors = palette.hex_colors
+
+    # TODO: this only works cleanly for min:max or 2 endpoint values.  Otherwise require that the number of palette colors match the number of values
+
+    colors = [(values[0], Color.from_hex(hex_colors[0]))]
+
+    intermediate_colors = hex_colors[1:-1]
+    if intermediate_colors:
+        interval = (values[-1] - values[0]) / (len(intermediate_colors) + 1)
+        for i, color in enumerate(intermediate_colors):
+            colors.append((values[0] + (i + 1) * interval, Color.from_hex(color)))
+
+    colors.append((values[-1], Color.from_hex(hex_colors[-1])))
+
+    return StretchedRenderer(colors, colorspace='rgb')  # I think all palettable palettes are in RGB ramps
+
+
 def render_image(renderer, data, filename, scale=1, reproject_kwargs=None):
     if reproject_kwargs is not None:
 
@@ -84,6 +116,7 @@ def render_image(renderer, data, filename, scale=1, reproject_kwargs=None):
 @click.option('--renderer_type', default='stretched', help='Name of renderer [default: stretched].  (other types not yet implemented)')
 @click.option('--colormap', default='min:#000000,max:#FFFFFF', help='Provide colormap as comma-separated lookup of value to hex color code.  (Example: -1:#FF0000,1:#0000FF) [default: min:#000000,max:#FFFFFF]')
 @click.option('--colorspace', default='hsv', type=click.Choice(['hsv', 'rgb']), help='Color interpolation colorspace')
+@click.option('--palette', default=None, help='Palettable color palette (Example: colorbrewer.sequential.Blues_3)')
 @click.option('--scale', default=1.0, help='Scale factor for data pixel to screen pixel size')
 @click.option('--id_variable', help='ID variable used to provide IDs during image generation.  Must be of same dimensionality as first dimension of variable (example: time)')
 @click.option('--lh', default=150, help='Height of the legend in pixels [default: 150]')
@@ -105,6 +138,7 @@ def render_netcdf(
         renderer_type,
         colormap,
         colorspace,
+        palette,
         scale,
         id_variable,
         lh,
@@ -153,8 +187,13 @@ def render_netcdf(
         renderer = renderer_from_dict(renderer_dict)
 
     else:
+
         if renderer_type == 'stretched':
-            renderer = _colormap_to_stretched_renderer(colormap, colorspace, filenames, variable)
+            if palette is not None:
+                renderer = _palette_to_stretched_renderer(palette, 'min,max', filenames, variable)
+
+            else:
+                renderer = _colormap_to_stretched_renderer(colormap, colorspace, filenames, variable)
         else:
             raise NotImplementedError('other renderers not yet built')
 
