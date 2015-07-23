@@ -83,6 +83,9 @@ class UniqueValuesRenderer(RasterRenderer):
     def serialize(self):
         ret = super(UniqueValuesRenderer, self).serialize()
         if self.labels:
-            ret['labels'] = self.labels
+            if 'options' in ret:
+                ret['options']['labels'] = self.labels
+            else:
+                ret['options'] = {'labels': self.labels}
 
         return ret

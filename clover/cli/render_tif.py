@@ -97,7 +97,7 @@ def render_image(renderer, data, filename, scale=1, reproject_kwargs=None):
 
 
     resampling = ANTIALIAS
-    if renderer.type == 'unique':
+    if renderer.name == 'unique':
         resampling = NEAREST
 
     img = renderer.render_image(data)

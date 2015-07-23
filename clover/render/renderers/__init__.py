@@ -30,8 +30,8 @@ class RasterRenderer(object):
         self._generate_palette()
 
     @property
-    def type(self):
-        return self.__class__.__name__.lower().replace('renderer', '')
+    def name(self):
+        return self.__class__.__name__.lower().replace('renderer', '').replace('values', '')
 
     def get_legend(self, image_width=20, image_height=20):
         raise NotImplementedError("Must be provided by child class")
@@ -82,11 +82,11 @@ class RasterRenderer(object):
     def serialize(self):
         """ Returns self as a dictionary """
         ret = {
-            "type": self.__class__.__name__.lower().replace('renderer', ''),
+            "type": self.name,
             "colors": [(entry[0], entry[1].to_hex()) for entry in self.colormap]
         }
         if self.fill_value is not None:
-            ret['fill_value'] = self.fill_value
+            ret['options'] = {'fill_value': self.fill_value}
 
         return ret
 
