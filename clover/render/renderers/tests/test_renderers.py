@@ -34,9 +34,9 @@ def test_stretched_renderer(tmpdir):
     assert legend[0].image.size == (20, 20)
 
     assert cmp(renderer.serialize(), {
-        'color_space': 'hsv',
         'colors': [(0.0, '#FF0000'), (99.0, '#0000FF')],
-        'type': 'stretched'
+        'type': 'stretched',
+        'options': {'color_space': 'hsv'}
     }) == 0
 
 
@@ -81,8 +81,10 @@ def test_uniquevalues_renderer(tmpdir):
         (50, Color(0,255,0,255)),
         (100, Color(0,0,255,255))
     )
+    labels = ('A', 'B', 'C', 'D')
 
-    renderer = UniqueValuesRenderer(colors)
+
+    renderer = UniqueValuesRenderer(colors, labels=labels)
 
     assert renderer.name == 'unique'
 
@@ -101,7 +103,10 @@ def test_uniquevalues_renderer(tmpdir):
             (25, '#FFFFFF'),
             (50, '#00FF00'),
             (100, '#0000FF')],
-        'type': 'unique'
+        'type': 'unique',
+        'options': {
+            'labels': ('A', 'B', 'C', 'D')
+        }
     }) == 0
 
 

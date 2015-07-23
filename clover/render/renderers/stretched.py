@@ -113,5 +113,10 @@ class StretchedRenderer(RasterRenderer):
 
     def serialize(self):
         ret = super(StretchedRenderer, self).serialize()
-        ret['color_space'] = self.colorspace
+
+        if 'options' in ret:
+            ret['options']['color_space'] = self.colorspace
+        else:
+            ret['options'] = {'color_space': self.colorspace}
+
         return ret
