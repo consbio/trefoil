@@ -29,6 +29,10 @@ class RasterRenderer(object):
         self.values = numpy.array([entry[0] for entry in self.colormap])
         self._generate_palette()
 
+    @property
+    def type(self):
+        return self.__class__.__name__.lower().replace('renderer', '')
+
     def get_legend(self, image_width=20, image_height=20):
         raise NotImplementedError("Must be provided by child class")
 
