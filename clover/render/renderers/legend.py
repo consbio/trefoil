@@ -40,7 +40,7 @@ class LegendElement(object):
         width = self.image.size[0] + text_width
         height = self.image.size[1]
 
-        img = Image.new("RGBA", (width, height + 2 * text_height), color=(255,255,255,255))
+        img = Image.new("RGBA", (width, height + 2 * text_height), color=(255,255,255,0))
         img.paste(self.image, (0, text_height))
 
         canvas = ImageDraw.Draw(img)

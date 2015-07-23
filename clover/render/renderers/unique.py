@@ -1,4 +1,7 @@
-from . import *
+from PIL import Image
+import numpy
+
+from clover.render.renderers import RasterRenderer
 from clover.render.renderers.legend import LegendElement
 from clover.utilities.format import PrecisionFormatter
 
@@ -76,3 +79,10 @@ class UniqueValuesRenderer(RasterRenderer):
 
     def _generate_palette(self):
         self.palette = numpy.asarray([entry[1].to_tuple() for entry in self.colormap]).astype(numpy.uint8)
+
+    def serialize(self):
+        ret = super(UniqueValuesRenderer, self).serialize()
+        if self.labels:
+            ret['labels'] = self.labels
+
+        return ret
