@@ -78,7 +78,7 @@ class Color(object):
         return Color(red, green, blue, alpha=alpha, bits=bits)
 
     @classmethod
-    def from_hex(cls, value):
+    def from_hex(cls, value, alpha=None):
         try:
             if value[0] == '#':
                 value = value[1:]
@@ -92,7 +92,11 @@ class Color(object):
             color = []
             for i in range(0, 8, 2):
                 color.append(int(value[i:i+2], 16))
-            return cls(*color)
+
+            if alpha is not None:
+                assert isinstance(alpha, int)
+
+            return cls(*color, alpha=alpha)
 
         except ValueError:
             raise ValueError("Invalid hex color: {}".format(value))
