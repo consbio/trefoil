@@ -9,3 +9,5 @@ def test_color():
     c2 = Color.from_hsv(*c.to_hsv())
     assert c2.to_tuple() == color_tuple
 
+    assert Color.from_hex("#000000", alpha=100)
+

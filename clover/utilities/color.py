@@ -85,7 +85,7 @@ class Color(object):
             if len(value) == 3:
                 value = ''.join([c*2 for c in value])
             if len(value) == 6:
-                value = "{}ff".format(value)
+                value = "{0}{1:02X}".format(value, alpha if alpha is not None else 255)
             if len(value) != 8:
                 raise ValueError
 
@@ -93,10 +93,7 @@ class Color(object):
             for i in range(0, 8, 2):
                 color.append(int(value[i:i+2], 16))
 
-            if alpha is not None:
-                assert isinstance(alpha, int)
-
-            return cls(*color, alpha=alpha)
+            return cls(*color)
 
         except ValueError:
             raise ValueError("Invalid hex color: {}".format(value))
