@@ -362,3 +362,11 @@ def collect_statistics(filenames, variables):
         stats['max'] = numpy.max(stats['max']).item()
 
     return statistics
+
+
+def data_variables(ds):
+    """
+    Returns subset of ds.variables that are data rather than dimension variables
+    """
+
+    return  OrderedDict([(k, v) for k, v in ds.variables.iteritems() if k not in ds.dimensions])

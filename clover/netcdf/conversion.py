@@ -1,13 +1,14 @@
 from netCDF4 import Dataset
-import numpy
+import os
+import time
+
 import rasterio
 import pyproj
 import six
+
 from clover.netcdf.crs import set_crs
-from clover.netcdf.utilities import set_ncattrs
 from clover.netcdf.variable import SpatialCoordinateVariables
 from clover.geometry.bbox import BBox
-import time
 
 
 def raster_to_netcdf(filename_or_raster, outfilename=None, variable_name='data', format='NETCDF4', **kwargs):
@@ -24,6 +25,9 @@ def raster_to_netcdf(filename_or_raster, outfilename=None, variable_name='data',
     start = time.time()
 
     if isinstance(filename_or_raster, six.string_types):
+        if not os.path.exists(filename_or_raster):
+            raise ValueError('File does not exist: {0}'.format(filename_or_raster))
+
         src = rasterio.open(filename_or_raster)
         managed_raster = True
     else:
