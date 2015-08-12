@@ -6,22 +6,26 @@ from netCDF4 import Dataset
 from rasterio.warp import RESAMPLING
 from clover.cli import cli
 from clover.netcdf.warp import warp_like
+from clover.netcdf.crs import get_crs
 from clover.netcdf.utilities import data_variables
+
 
 
 @cli.command(short_help="Warp NetCDF files to match a template")
 @click.argument('filename_pattern')
 @click.argument('output_directory', type=click.Path())
 @click.option('--variables', help='comma-delimited list of variables to warp.  Default: all data variables', default=None)
+@click.option('--src-crs', help='Source Coordinate Reference System (only used if none found in source dataset)',
+              default='EPSG:4326', show_default=True)
 @click.option('--like', help='Template dataset', type=click.Path(exists=True), required=True)  # Required for now
 @click.option('--resampling', default='nearest',
               type=click.Choice(('nearest', 'cubic', 'lanczos', 'mode')),
-              help='Resampling method for reprojection', show_default=True
-              )
+              help='Resampling method for reprojection', show_default=True)
 def warp(
     filename_pattern,
     output_directory,
     variables,
+    src_crs,
     like,
     resampling):
 
@@ -47,12 +51,14 @@ def warp(
                 # filter to only variables present in this dataset
                 ds_variables = [v for v in variables if v in ds.variables]
 
+            ds_crs = get_crs(ds, ds_variables[0]) or src_crs
+
             with Dataset(os.path.join(output_directory, os.path.split(filename)[1]), 'w') as out_ds:
                 click.echo('Processing: {0}'.format(filename))
 
                 warp_like(
                     ds,
-                    ds_projection=Proj(init='EPSG:4326'),  # source data are in geographic w/ WGS84 datum
+                    ds_projection=ds_crs,
                     variables=ds_variables,
                     out_ds=out_ds,
                     template_ds=template_ds,
