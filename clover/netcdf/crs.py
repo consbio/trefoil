@@ -30,7 +30,8 @@ def epsg_to_proj4(epsg_code):
     match = re.search('(?<=<{0}>).*(?=<>)'.format(epsg_code), data)
     if not match:
         raise ValueError('ERROR: EPSG {0} not found in proj4 data file'.format(epsg_code))
-    return match.group().strip()
+
+    return match.group().strip().replace('longlat', 'latlong')  # pyproj stores the longlat instead of latlong as used here
 
 
 PROJ4_KEY = 'proj4'
@@ -191,7 +192,7 @@ def set_crs(dataset, variable_name, projection, set_proj4_att=False):
     if not proj_key in PROJ4_CF_PARAM_MAP.keys():
         raise ValueError('CF Convention mapping is not yet available for projection {0}'.format(proj_key))
 
-    crs_variable_name = 'crs_{0}'.format(pj_list[proj_key].replace(' ', '_'))
+    crs_variable_name = 'crs_{0}'.format(pj_list[proj_key].replace(' ', '_').replace('/', ''))
     if not crs_variable_name in dataset.variables:
         crs_variable = dataset.createVariable(crs_variable_name, 'S1')
 
@@ -238,4 +239,30 @@ def set_crs(dataset, variable_name, projection, set_proj4_att=False):
         set_ncattrs(crs_variable, ncatts)
 
     variable.setncattr('grid_mapping', crs_variable_name)
+
+
+
+def is_geographic(dataset, variable_name):
+    """
+    Try to determine if dataset appears to be geographic.  This is a fallback if a true CRS cannot be obtained using other
+    functions.  Currently limited to checking names of spatial dimensions.
+
+    :param dataset: open netCDF dataset
+    :param variable_name: name of data variable
+    :returns: True if variable appears to be in geographic coordinates
+    """
+
+    options = (
+        {'lat', 'lon'},
+    )
+
+    variable = dataset.variables[variable_name]
+    dim_names = set(variable.dimensions[-2:])
+
+    for option in options:
+        if not option.difference(dim_names):
+            return True
+
+    return False
+
 

@@ -1,12 +1,13 @@
 import pytest
 from netCDF4 import Dataset
 from pyproj import Proj, pj_ellps
-from clover.netcdf.crs import get_crs, set_crs
+from clover.netcdf.crs import get_crs, set_crs, is_geographic
 from clover.netcdf.utilities import get_ncattrs, set_ncattrs
 from rasterio import crs as crs_utils
 
 import logging, sys
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+
 
 def test_get_crs(tmpdir):
     """ Test reading proj4 string from CF convention parameters """
@@ -104,6 +105,20 @@ def test_set_crs(tmpdir):
         set_crs(ds, 'data3', Proj(proj4))
 
 
+def test_set_crs_epsg(tmpdir):
+    """ Tests for EPSG codes specifically """
+
+    ds = Dataset(str(tmpdir.join('test.nc')), 'w')
+    data_var = ds.createVariable('data', 'S1')
+    set_crs(ds, 'data', Proj(init='EPSG:4326'))
+    crs_var = ds.variables[get_ncattrs(data_var)['grid_mapping']]
+    ncatts = get_ncattrs(crs_var)
+
+    assert ncatts['grid_mapping_name'] == 'latitude_longitude'
+    assert ncatts['semi_major_axis'] == 6378137.0
+    assert ncatts['inverse_flattening'] == 298.257223563
+
+
 def test_symmetric_proj4(tmpdir):
     """ Test writing and reading proj4 string as attribute of variable """
 
@@ -132,3 +147,19 @@ def test_utm(tmpdir):
 
     assert len(out_data) == 2  # There should be 2 parameters: init, units
     assert not set(in_data).difference(out_data)
+
+
+def test_is_geographic(tmpdir):
+    ds = Dataset(str(tmpdir.join('test.nc')), 'w')
+    ds.createDimension('lat', 1)
+    ds.createDimension('lon', 1)
+    ds.createVariable('data', 'S1', dimensions=('lat', 'lon'))
+
+    assert is_geographic(ds, 'data') == True
+
+    ds.createDimension('foo', 1)
+    ds.createDimension('bar', 1)
+    ds.createVariable('data2', 'S1', dimensions=('foo', 'bar'))
+
+    assert is_geographic(ds, 'data2') == False
+
