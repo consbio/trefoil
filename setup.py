@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='clover',
-    version='0.1.1',
+    version='0.2.0',
     packages=['clover',
               'clover.analysis', 'clover.cli',
               'clover.geometry', 'clover.geometry.tests',

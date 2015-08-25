@@ -7,104 +7,26 @@ max (calculate max across datasets)
 0.5*max (calculate max across datasets, and multiply by value)
 """
 
-
-import importlib
 import os
 import glob
 from itertools import product
 from collections import Iterable
-import click
 import json
 from math import ceil
 from netCDF4 import Dataset
-import numpy
-from PIL.Image import ANTIALIAS
+
+import click
 from pyproj import Proj
 from affine import Affine
-
-import rasterio
 from rasterio import crs
-from rasterio.warp import reproject, RESAMPLING
+from rasterio.warp import RESAMPLING
 
-from clover.utilities.color import Color
-from clover.render.renderers.stretched import StretchedRenderer
 from clover.render.renderers.utilities import renderer_from_dict
-from clover.netcdf.utilities import collect_statistics
 from clover.netcdf.variable import SpatialCoordinateVariables
 from clover.geometry.bbox import BBox
 from clover.netcdf.crs import get_crs
 from clover.cli import cli
-
-
-def _colormap_to_stretched_renderer(colormap, colorspace='hsv', filenames=None, variable=None):
-    statistics = None
-    if 'min:' in colormap or 'max:' in colormap or 'mean' in colormap:
-        if not filenames and variable:
-            raise ValueError('filenames and variable are required inputs to use colormap with statistics')
-        statistics = collect_statistics(filenames, (variable,))[variable]
-
-    colors = []
-    for entry in colormap.split(','):
-        value, color = entry.split(':')
-        # TODO: add proportions of statistics
-        if value in ('min', 'max', 'mean'):
-            value = statistics[value]
-        else:
-            value = float(value)
-        colors.append((value, Color.from_hex(color)))
-
-    return StretchedRenderer(colors, colorspace=colorspace)
-
-
-def _palette_to_stretched_renderer(palette_path, values, filenames=None, variable=None):
-    index = palette_path.rindex('.')
-    palette = getattr(importlib.import_module('palettable.' + palette_path[:index]), palette_path[index+1:])
-
-    values = values.split(',')
-    if not len(values) > 1:
-        raise ValueError('Must provide at least 2 values for palette-based stretched renderer')
-
-    statistics = None
-    if 'min' in values or 'max' in values:
-        if not filenames and variable:
-            raise ValueError('filenames and variable are required inputs to use palette with statistics')
-        statistics = collect_statistics(filenames, (variable,))[variable]
-
-        for statistic in ('min', 'max'):
-            if statistic in values:
-                values[values.index(statistic)] = statistics[statistic]
-
-    hex_colors = palette.hex_colors
-
-    # TODO: this only works cleanly for min:max or 2 endpoint values.  Otherwise require that the number of palette colors match the number of values
-
-    colors = [(values[0], Color.from_hex(hex_colors[0]))]
-
-    intermediate_colors = hex_colors[1:-1]
-    if intermediate_colors:
-        interval = (values[-1] - values[0]) / (len(intermediate_colors) + 1)
-        for i, color in enumerate(intermediate_colors):
-            colors.append((values[0] + (i + 1) * interval, Color.from_hex(color)))
-
-    colors.append((values[-1], Color.from_hex(hex_colors[-1])))
-
-    return StretchedRenderer(colors, colorspace='rgb')  # I think all palettable palettes are in RGB ramps
-
-
-def render_image(renderer, data, filename, scale=1, reproject_kwargs=None):
-    if reproject_kwargs is not None:
-
-        with rasterio.drivers():
-            out = numpy.empty(shape=reproject_kwargs['dst_shape'], dtype=data.dtype)
-            out.fill(data.fill_value)
-            reproject(data, out, **reproject_kwargs)
-            # Reapply mask
-            data = numpy.ma.masked_array(out, mask=out == data.fill_value)
-
-    img = renderer.render_image(data)
-    if scale != 1:
-        img = img.resize((numpy.array(data.shape[::-1]) * scale).astype(numpy.uint), ANTIALIAS)
-    img.save(filename)
+from clover.cli.utilities import render_image, collect_statistics, colormap_to_stretched_renderer, palette_to_stretched_renderer
 
 
 @cli.command(short_help="Render netcdf files to images")
@@ -190,10 +112,10 @@ def render_netcdf(
 
         if renderer_type == 'stretched':
             if palette is not None:
-                renderer = _palette_to_stretched_renderer(palette, 'min,max', filenames, variable)
+                renderer = palette_to_stretched_renderer(palette, 'min,max', filenames, variable)
 
             else:
-                renderer = _colormap_to_stretched_renderer(colormap, colorspace, filenames, variable)
+                renderer = colormap_to_stretched_renderer(colormap, colorspace, filenames, variable)
         else:
             raise NotImplementedError('other renderers not yet built')
 
@@ -228,6 +150,7 @@ def render_netcdf(
                 raise click.BadParameter('variable {0} was not found in file: {1}'.format(variable, filename), param='variable', param_hint='VARIABLE')
 
             data = ds.variables[variable][:]
+            num_dimensions = len(data.shape)
 
             # get transforms, assume last 2 dimensions on variable are spatial in row, col order
             y_dim, x_dim = ds.variables[variable].dimensions[-2:]
@@ -235,7 +158,10 @@ def render_netcdf(
             coords = SpatialCoordinateVariables.from_dataset(ds, x_dim, y_dim)#, projection=Proj(src_crs))
 
             if coords.y.is_ascending_order():
-                data = data[::-1]
+                if num_dimensions == 2:
+                    data = data[::-1]
+                else:
+                    data = data[:, ::-1]
 
             reproject_kwargs = None
             if dst_crs is not None:
@@ -283,7 +209,7 @@ def render_netcdf(
                     wgs84_bbox = full_bbox.project(Proj(init='EPSG:4326'))
                     print('WGS84 Anchors: {0}'.format([[wgs84_bbox.ymin, wgs84_bbox.xmin], [wgs84_bbox.ymax, wgs84_bbox.xmax]]))
 
-            num_dimensions = len(data.shape)
+
             if num_dimensions == 2:
                 image_filename = os.path.join(output_directory,
                                               '{0}.png'.format(filename_root))
