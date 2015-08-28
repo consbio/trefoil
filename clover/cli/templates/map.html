@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>Leaflet Preview</title>
+    <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/leaflet/1.0.0-beta.1/leaflet.css" />
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/leaflet/1.0.0-beta.1/leaflet.js"></script>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+    <style>
+        html {
+            height: 100%;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
+        h4 {
+            margin: 0;
+        }
+        #Map {
+            position: absolute;
+            top:36px;
+            left:0;
+            bottom:0;
+            right:0;
+            border-top: 2px solid #AAA;
+        }
+        #Legend {
+            position: absolute;
+            z-index: 1000;
+            bottom: 24px;
+            right: 10px;
+        }
+        .leaflet-container img.leaflet-image-layer {
+            max-width: none !important;
+        }
+        .box {
+            background: #FFF;
+            background: rgba(255, 255, 255, 0.95);
+            border: 4px solid #FFF;
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <div style="padding: 8px 10px;">
+        <label>Layer: </label>
+        <select id="Selector"></select>
+        <label style="margin-left: 20px;">Transparency: </label>
+        <input id="Transparency" type="range" min="0" max="100" step="10" value="0" style="vertical-align: middle;"/>
+    </div>
+    <div id="Map"></div>
+    <div id="Legend" class="box">
+        <h4>{{ variable }}</h4>
+        <img src="{{ variable }}_legend.png" />
+    </div>
+    <script>
+        var basemap = L.tileLayer('http://{s}.tile.stamen.com/toner-lite/{z}/{x}/{y}.png', {
+            attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
+            subdomains: 'abcd',
+            maxZoom: 20
+        });
+
+        var map = L.map('Map', {layers: [basemap]});
+
+        var layers = {{ layers }};
+
+        var ids = d3.keys(layers);
+        ids.sort(d3.ascending);
+        var selector = d3.select('#Selector');
+
+        var layer = new L.imageOverlay(layers[ids[0]], {{ bounds }}).addTo(map);
+        map.fitBounds(layer);
+
+        selector.selectAll('option')
+            .data(ids).enter()
+            .append('option')
+            .attr('value', function(d){return d})
+            .html(function(d){return d});
+
+        selector.on('change', function(){
+            layer.setUrl(layers[d3.select('#Selector').property('value')]);
+        });
+
+        d3.select('#Transparency').on('change', function(){
+            layer.setOpacity((100 - parseInt(d3.select('#Transparency').property('value'))) / 100.0);
+        });
+
+    </script>
+</body>
+</html>

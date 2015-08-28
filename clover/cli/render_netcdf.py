@@ -18,6 +18,8 @@ import click
 from pyproj import Proj
 from rasterio import crs
 from rasterio.warp import RESAMPLING, calculate_default_transform
+from jinja2 import Environment, PackageLoader
+import webbrowser
 
 from clover.render.renderers.utilities import renderer_from_dict
 from clover.netcdf.variable import SpatialCoordinateVariables
@@ -50,6 +52,7 @@ from clover.cli.utilities import get_leaflet_anchors
 @click.option('--res', default=None, type=click.FLOAT, help='Destination pixel resolution in destination coordinate system units' )
 @click.option('--resampling', default='nearest', type=click.Choice(('nearest', 'cubic', 'lanczos', 'mode')), help='Resampling method for reprojection (default: nearest')
 @click.option('--anchors', default=False, is_flag=True, help='Print anchor coordinates for use in Leaflet ImageOverlay')
+@click.option('--map', 'interactive_map', default=False, is_flag=True, help='Open in interactive map')
 def render_netcdf(
         filename_pattern,
         variable,
@@ -69,12 +72,20 @@ def render_netcdf(
         dst_crs,
         res,
         resampling,
-        anchors):
+        anchors,
+        interactive_map):
     """
     Render netcdf files to images.
 
     colormap is ignored if renderer_file is provided
+
+    --dst-crs is ignored if using --map option (always uses EPSG:3857
     """
+
+    # Parameter overrides
+    if interactive_map:
+        dst_crs = 'EPSG:3857'
+
 
     filenames = glob.glob(filename_pattern)
     if not filenames:
@@ -139,7 +150,7 @@ def render_netcdf(
     legend = renderer.get_legend(image_height=lh, breaks=legend_breaks, ticks=legend_ticks, max_precision=2)[0].to_image()
     legend.save(os.path.join(output_directory, '{0}_legend.png'.format(variable)))
 
-
+    layers = {}
     for filename in filenames:
         with Dataset(filename) as ds:
             print 'Processing',filename
@@ -197,14 +208,16 @@ def render_netcdf(
                     flip_y = True
 
 
-            if anchors:
+            if anchors or interactive_map:
                 if not (dst_crs or src_crs):
-                    raise click.BadParameter('must provide at least src_crs to get Leaflet anchors',
+                    raise click.BadParameter('must provide at least src_crs to get Leaflet anchors or interactive map',
                                              param='--src-crs', param_hint='--src-crs')
 
-                anchors = get_leaflet_anchors(BBox.from_affine(dst_transform, dst_width, dst_height,
+                leaflet_anchors = get_leaflet_anchors(BBox.from_affine(dst_transform, dst_width, dst_height,
                                                                projection=Proj(dst_crs) if dst_crs else None))
-                print('Anchors: {0}'.format(anchors))
+
+                if anchors:
+                    print('Anchors: {0}'.format(leaflet_anchors))
 
 
             if num_dimensions == 2:
@@ -212,6 +225,9 @@ def render_netcdf(
                 if reproject_kwargs:
                     data = warp_array(data, **reproject_kwargs)
                 render_image(renderer, data, image_filename, scale, flip_y=flip_y)
+
+                local_filename = os.path.split(image_filename)[1]
+                layers[local_filename.replace('.png', '')] = local_filename
 
             elif num_dimensions == 3:
                 if id_variable is not None:
@@ -223,6 +239,9 @@ def render_netcdf(
                     if reproject_kwargs:
                         data = warp_array(data, **reproject_kwargs)
                     render_image(renderer, data[index], image_filename, scale, flip_y=flip_y)
+
+                local_filename = os.path.split(image_filename)[1]
+                layers[local_filename.replace('.png', '')] = local_filename
 
             else:
                 # Assume last 2 components of shape are lat & lon, rest are iterated over
@@ -258,3 +277,21 @@ def render_netcdf(
                     if reproject_kwargs:
                         data = warp_array(data, **reproject_kwargs)
                     render_image(renderer, data[combined_index], image_filename, scale, flip_y=flip_y)
+
+                    local_filename = os.path.split(image_filename)[1]
+                    layers[local_filename.replace('.png', '')] = local_filename
+
+
+    if interactive_map:
+        index_html = os.path.join(output_directory, 'index.html')
+        with open(index_html, 'w') as out:
+            template = Environment(loader=PackageLoader('clover.cli')).get_template('map.html')
+            out.write(
+                template.render(
+                    layers=json.dumps(layers),
+                    bounds=str(leaflet_anchors),
+                    variable=variable
+                )
+            )
+
+        webbrowser.open(index_html)

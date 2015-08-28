@@ -7,5 +7,5 @@ rasterio>=0.25
 click
 pytz
 palettable
-tornado
 pyproj
+jinja2
