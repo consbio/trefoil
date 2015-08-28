@@ -153,7 +153,7 @@ def render_netcdf(
     layers = {}
     for filename in filenames:
         with Dataset(filename) as ds:
-            print 'Processing',filename
+            print('Processing',filename)
             filename_root = os.path.split(filename)[1].replace('.nc', '')
 
             if not variable in ds.variables:
