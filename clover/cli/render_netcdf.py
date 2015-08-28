@@ -5,6 +5,12 @@ Stretched renderers may have one of the following colormap values:
 1.0 (absolute)
 max (calculate max across datasets)
 0.5*max (calculate max across datasets, and multiply by value)
+
+TODO:
+* connect palettes to create matching class breaks
+* combine palette and scale over which to stretch
+
+
 """
 
 import os
@@ -31,6 +37,16 @@ from clover.cli.utilities import render_image, collect_statistics, colormap_to_s
 from clover.cli.utilities import get_leaflet_anchors
 
 
+# Common defaults for usability wins
+DEFAULT_PALETTES = {
+    'tmin': ('colorbrewer.sequential.YlOrRd_5', 'min,max'),
+    'tmax': ('colorbrewer.sequential.YlOrRd_5', 'min,max'),
+    'ppt': ('colorbrewer.diverging.RdYlGn_5', 'min,max'),
+    'pet': ('colorbrewer.diverging.RdYlGn_5', 'max,min')
+}
+
+
+
 @cli.command(short_help="Render netcdf files to images")
 @click.argument('filename_pattern')
 @click.argument('variable')
@@ -38,11 +54,12 @@ from clover.cli.utilities import get_leaflet_anchors
 @click.option('--renderer_file', help='File containing renderer JSON', type=click.Path())
 @click.option('--save', default=False, is_flag=True, help='Save renderer to renderer_file')
 @click.option('--renderer_type', default='stretched', help='Name of renderer [default: stretched].  (other types not yet implemented)')
-@click.option('--colormap', default='min:#000000,max:#FFFFFF', help='Provide colormap as comma-separated lookup of value to hex color code.  (Example: -1:#FF0000,1:#0000FF) [default: min:#000000,max:#FFFFFF]')
+@click.option('--colormap', default=None, help='Provide colormap as comma-separated lookup of value to hex color code.  (Example: -1:#FF0000,1:#0000FF)')
 @click.option('--colorspace', default='hsv', type=click.Choice(['hsv', 'rgb']), help='Color interpolation colorspace')
 @click.option('--palette', default=None, help='Palettable color palette (Example: colorbrewer.sequential.Blues_3)')
+@click.option('--palette_stretch', default='min,max', help='Value range over which to apply the palette when using stretched renderer (comma-separated)', show_default=True)
 @click.option('--scale', default=1.0, help='Scale factor for data pixel to screen pixel size')
-@click.option('--id_variable', help='ID variable used to provide IDs during image generation.  Must be of same dimensionality as first dimension of variable (example: time)')
+@click.option('--id_variable', help='ID variable used to provide IDs during image generation.  Must be of same dimensionality as first dimension of variable (example: time).  Guessed from the 3rd dimension')
 @click.option('--lh', default=150, help='Height of the legend in pixels [default: 150]')
 @click.option('--legend_breaks', default=None, type=click.INT, help='Number of breaks to show on legend for stretched renderer')
 @click.option('--legend_ticks', default=None, type=click.STRING, help='Legend tick values for stretched renderer')
@@ -63,6 +80,7 @@ def render_netcdf(
         colormap,
         colorspace,
         palette,
+        palette_stretch,
         scale,
         id_variable,
         lh,
@@ -80,6 +98,9 @@ def render_netcdf(
     colormap is ignored if renderer_file is provided
 
     --dst-crs is ignored if using --map option (always uses EPSG:3857
+
+    If no colormap or palette is provided, a default palette may be chosen based on the name of the variable.
+
     """
 
     # Parameter overrides
@@ -122,9 +143,15 @@ def render_netcdf(
 
         if renderer_type == 'stretched':
             if palette is not None:
-                renderer = palette_to_stretched_renderer(palette, 'min,max', filenames, variable)
+                renderer = palette_to_stretched_renderer(palette, palette_stretch, filenames, variable)
+
+            elif colormap is None and variable in DEFAULT_PALETTES:
+                palette, palette_stretch = DEFAULT_PALETTES[variable]
+                renderer = palette_to_stretched_renderer(palette, palette_stretch, filenames, variable)
 
             else:
+                if colormap is None:
+                    colormap = 'min:#000000,max:#FFFFFF'
                 renderer = colormap_to_stretched_renderer(colormap, colorspace, filenames, variable)
         else:
             raise NotImplementedError('other renderers not yet built')
@@ -150,78 +177,93 @@ def render_netcdf(
     legend = renderer.get_legend(image_height=lh, breaks=legend_breaks, ticks=legend_ticks, max_precision=2)[0].to_image()
     legend.save(os.path.join(output_directory, '{0}_legend.png'.format(variable)))
 
+    with Dataset(filenames[0]) as ds:
+        dimensions = ds.variables[variable].dimensions
+        data = ds.variables[variable][:]
+        num_dimensions = len(data.shape)
+
+        if num_dimensions == 3:
+            if id_variable:
+                if data.shape[0] != ds.variables[id_variable][:].shape[0]:
+                    raise click.BadParameter('must be same dimensionality as 3rd dimension of {0}'.format(variable),
+                                             param='--id_variable', param_hint='--id_variable')
+            else:
+                # Guess from the 3rd dimension
+                guess = dimensions[0]
+                if guess in ds.variables and ds.variables[guess][:].shape[0] == data.shape[0]:
+                    id_variable = guess
+
+        ds_crs = get_crs(ds, variable)
+        if not ds_crs and is_geographic(ds, variable):
+            ds_crs = 'EPSG:4326'  # Assume all geographic data is WGS84
+
+        src_crs = crs.from_string(ds_crs) if ds_crs else {'init': src_crs} if src_crs else None
+
+        # get transforms, assume last 2 dimensions on variable are spatial in row, col order
+        y_dim, x_dim = dimensions[-2:]
+        coords = SpatialCoordinateVariables.from_dataset(ds, x_dim, y_dim,
+                                                         projection=Proj(src_crs) if src_crs else None)
+
+        flip_y = False
+        reproject_kwargs = None
+        if dst_crs is not None:
+            if not src_crs:
+                raise click.BadParameter('must provide src_crs to reproject', param='--src-crs',
+                                         param_hint='--src-crs')
+
+            dst_crs = crs.from_string(dst_crs)
+
+            src_height, src_width = coords.shape
+            dst_transform, dst_width, dst_height = calculate_default_transform(
+                src_crs, dst_crs, src_width, src_height,
+                *coords.bbox.as_list(), resolution=res
+            )
+
+            reproject_kwargs = {
+                'src_crs': src_crs,
+                'src_transform': coords.affine,
+                'dst_crs': dst_crs,
+                'dst_transform': dst_transform,
+                'resampling': getattr(RESAMPLING, resampling),
+                'dst_shape': (dst_height, dst_width)
+            }
+
+        else:
+            dst_transform = coords.affine
+            dst_height, dst_width = coords.shape
+            dst_crs = src_crs
+
+            if coords.y.is_ascending_order():
+                # Only needed if we are not already reprojecting the data, since that will flip it automatically
+                flip_y = True
+
+        if anchors or interactive_map:
+            if not (dst_crs or src_crs):
+                raise click.BadParameter('must provide at least src_crs to get Leaflet anchors or interactive map',
+                                         param='--src-crs', param_hint='--src-crs')
+
+            leaflet_anchors = get_leaflet_anchors(BBox.from_affine(dst_transform, dst_width, dst_height,
+                                                           projection=Proj(dst_crs) if dst_crs else None))
+
+            if anchors:
+                print('Anchors: {0}'.format(leaflet_anchors))
+
+
     layers = {}
     for filename in filenames:
         with Dataset(filename) as ds:
-            print('Processing',filename)
+            print 'Processing',filename
             filename_root = os.path.split(filename)[1].replace('.nc', '')
 
             if not variable in ds.variables:
                 raise click.BadParameter('variable {0} was not found in file: {1}'.format(variable, filename),
                                          param='variable', param_hint='VARIABLE')
 
-            ds_crs = get_crs(ds, variable)
-            if not ds_crs and is_geographic(ds, variable):
-                ds_crs = 'EPSG:4326'  # Assume all geographic data is WGS84
-
-            src_crs = crs.from_string(ds_crs) if ds_crs else {'init': src_crs} if src_crs else None
-
-            data = ds.variables[variable][:]
-            num_dimensions = len(data.shape)
-
-            # get transforms, assume last 2 dimensions on variable are spatial in row, col order
-            y_dim, x_dim = ds.variables[variable].dimensions[-2:]
-            coords = SpatialCoordinateVariables.from_dataset(ds, x_dim, y_dim,
-                                                             projection=Proj(src_crs) if src_crs else None)
-
-            flip_y = False
-            reproject_kwargs = None
-            if dst_crs is not None:
-                if not src_crs:
-                    raise click.BadParameter('must provide src_crs to reproject', param='--src-crs',
-                                             param_hint='--src-crs')
-
-                dst_crs = crs.from_string(dst_crs)
-
-                src_height, src_width = coords.shape
-                dst_transform, dst_width, dst_height = calculate_default_transform(
-                    src_crs, dst_crs, src_width, src_height,
-                    *coords.bbox.as_list(), resolution=res
-                )
-
-                reproject_kwargs = {
-                    'src_crs': src_crs,
-                    'src_transform': coords.affine,
-                    'dst_crs': dst_crs,
-                    'dst_transform': dst_transform,
-                    'resampling': getattr(RESAMPLING, resampling),
-                    'dst_shape': (dst_height, dst_width)
-                }
-
-            else:
-                dst_transform = coords.affine
-                dst_height, dst_width = coords.shape
-                dst_crs = src_crs
-
-                if coords.y.is_ascending_order():
-                    # Only needed if we are not already reprojecting the data, since that will flip it automatically
-                    flip_y = True
-
-
-            if anchors or interactive_map:
-                if not (dst_crs or src_crs):
-                    raise click.BadParameter('must provide at least src_crs to get Leaflet anchors or interactive map',
-                                             param='--src-crs', param_hint='--src-crs')
-
-                leaflet_anchors = get_leaflet_anchors(BBox.from_affine(dst_transform, dst_width, dst_height,
-                                                               projection=Proj(dst_crs) if dst_crs else None))
-
-                if anchors:
-                    print('Anchors: {0}'.format(leaflet_anchors))
-
+            if not ds.variables[variable].dimensions == dimensions:
+                raise click.ClickException('All datasets must have the same dimensions for {0}'.format(variable))
 
             if num_dimensions == 2:
-                image_filename = os.path.join(output_directory, '{0}.png'.format(filename_root))
+                image_filename = os.path.join(output_directory, '{0}_{1}.png'.format(filename_root, variable))
                 if reproject_kwargs:
                     data = warp_array(data, **reproject_kwargs)
                 render_image(renderer, data, image_filename, scale, flip_y=flip_y)
@@ -230,56 +272,57 @@ def render_netcdf(
                 layers[local_filename.replace('.png', '')] = local_filename
 
             elif num_dimensions == 3:
-                if id_variable is not None:
-                    assert data.shape[0] == ds.variables[id_variable][:].shape[0]
-
                 for index in range(data.shape[0]):
                     id = ds.variables[id_variable][index] if id_variable is not None else index
-                    image_filename = os.path.join(output_directory, '{0}__{1}.png'.format(filename_root, id))
+                    image_filename = os.path.join(output_directory, '{0}_{1}__{2}.png'.format(filename_root, variable, id))
+                    data_slice = data[index]
                     if reproject_kwargs:
-                        data = warp_array(data, **reproject_kwargs)
-                    render_image(renderer, data[index], image_filename, scale, flip_y=flip_y)
-
-                local_filename = os.path.split(image_filename)[1]
-                layers[local_filename.replace('.png', '')] = local_filename
-
-            else:
-                # Assume last 2 components of shape are lat & lon, rest are iterated over
-                id_variables = None
-                if id_variable is not None:
-                    id_variables = id_variable.split(',')
-                    for index, name in enumerate(id_variables):
-                        if name:
-                            assert data.shape[index] == ds.variables[name][:].shape[0]
-
-                ranges = []
-                for dim in data.shape[:-2]:
-                    ranges.append(range(0, dim))
-                for combined_index in product(*ranges):
-                    id_parts = []
-                    for index, dim_index in enumerate(combined_index):
-                        if id_variables is not None and index < len(id_variables) and id_variables[index]:
-                            id = ds.variables[id_variables[index]][dim_index]
-
-                            if not isinstance(id, basestring):
-                                if isinstance(id, Iterable):
-                                    id = '_'.join((str(i) for i in id))
-                                else:
-                                    id = str(id)
-
-                            id_parts.append(id)
-
-                        else:
-                            id_parts.append(str(dim_index))
-
-                    combined_id = '_'.join(id_parts)
-                    image_filename = os.path.join(output_directory, '{0}__{1}.png'.format(filename_root, combined_id))
-                    if reproject_kwargs:
-                        data = warp_array(data, **reproject_kwargs)
-                    render_image(renderer, data[combined_index], image_filename, scale, flip_y=flip_y)
+                        data_slice = warp_array(data_slice, **reproject_kwargs)
+                    render_image(renderer, data_slice, image_filename, scale, flip_y=flip_y)
 
                     local_filename = os.path.split(image_filename)[1]
                     layers[local_filename.replace('.png', '')] = local_filename
+
+
+
+            # TODO: not tested recently.  Make sure still correct
+            # else:
+            #     # Assume last 2 components of shape are lat & lon, rest are iterated over
+            #     id_variables = None
+            #     if id_variable is not None:
+            #         id_variables = id_variable.split(',')
+            #         for index, name in enumerate(id_variables):
+            #             if name:
+            #                 assert data.shape[index] == ds.variables[name][:].shape[0]
+            #
+            #     ranges = []
+            #     for dim in data.shape[:-2]:
+            #         ranges.append(range(0, dim))
+            #     for combined_index in product(*ranges):
+            #         id_parts = []
+            #         for index, dim_index in enumerate(combined_index):
+            #             if id_variables is not None and index < len(id_variables) and id_variables[index]:
+            #                 id = ds.variables[id_variables[index]][dim_index]
+            #
+            #                 if not isinstance(id, basestring):
+            #                     if isinstance(id, Iterable):
+            #                         id = '_'.join((str(i) for i in id))
+            #                     else:
+            #                         id = str(id)
+            #
+            #                 id_parts.append(id)
+            #
+            #             else:
+            #                 id_parts.append(str(dim_index))
+            #
+            #         combined_id = '_'.join(id_parts)
+            #         image_filename = os.path.join(output_directory, '{0}__{1}.png'.format(filename_root, combined_id))
+            #         if reproject_kwargs:
+            #             data = warp_array(data, **reproject_kwargs)  # NOTE: lack of index will break this
+            #         render_image(renderer, data[combined_index], image_filename, scale, flip_y=flip_y)
+            #
+            #         local_filename = os.path.split(image_filename)[1]
+            #         layers[local_filename.replace('.png', '')] = local_filename
 
 
     if interactive_map:

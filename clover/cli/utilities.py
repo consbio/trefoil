@@ -55,6 +55,8 @@ def palette_to_stretched_renderer(palette_path, values, filenames=None, variable
             if statistic in values:
                 values[values.index(statistic)] = statistics[statistic]
 
+    values = [float(v) for v in values]  # in case any are still strings
+
     hex_colors = palette.hex_colors
 
     # TODO: this only works cleanly for min:max or 2 endpoint values.  Otherwise require that the number of palette colors match the number of values

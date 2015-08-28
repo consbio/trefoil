@@ -59,6 +59,9 @@
         <img src="{{ variable }}_legend.png" />
     </div>
     <script>
+
+        var number_regex = /\d+/;
+
         var basemap = L.tileLayer('http://{s}.tile.stamen.com/toner-lite/{z}/{x}/{y}.png', {
             attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
             subdomains: 'abcd',
@@ -70,7 +73,10 @@
         var layers = {{ layers }};
 
         var ids = d3.keys(layers);
-        ids.sort(d3.ascending);
+//        ids.sort(d3.ascending);
+        ids.sort(function(a, b){
+            return d3.ascending(parseInt(number_regex.exec(a)[0]), parseInt(number_regex.exec(b)[0]));
+        });
         var selector = d3.select('#Selector');
 
         var layer = new L.imageOverlay(layers[ids[0]], {{ bounds }}).addTo(map);
