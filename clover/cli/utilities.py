@@ -1,24 +1,15 @@
 import importlib
 import numpy
 from PIL.Image import ANTIALIAS
-
-import rasterio
-from rasterio.warp import reproject
-
+from pyproj import Proj
 from clover.utilities.color import Color
 from clover.netcdf.utilities import collect_statistics
 from clover.render.renderers.stretched import StretchedRenderer
 
 
-def render_image(renderer, data, filename, scale=1, reproject_kwargs=None):
-    if reproject_kwargs is not None:
-
-        with rasterio.drivers():
-            out = numpy.empty(shape=reproject_kwargs['dst_shape'], dtype=data.dtype)
-            out.fill(data.fill_value)
-            reproject(data, out, **reproject_kwargs)
-            # Reapply mask
-            data = numpy.ma.masked_array(out, mask=out == data.fill_value)
+def render_image(renderer, data, filename, scale=1, flip_y=False):
+    if flip_y:
+        data = data[::-1]
 
     img = renderer.render_image(data)
     if scale != 1:
@@ -79,3 +70,12 @@ def palette_to_stretched_renderer(palette_path, values, filenames=None, variable
     colors.append((values[-1], Color.from_hex(hex_colors[-1])))
 
     return StretchedRenderer(colors, colorspace='rgb')  # I think all palettable palettes are in RGB ramps
+
+
+def get_leaflet_anchors(bbox):
+    """
+    Returns Leaflet anchor coordinates for creating an ImageOverlay layer.
+    """
+
+    wgs84_bbox = bbox.project(Proj(init='EPSG:4326'))
+    return [[wgs84_bbox.ymin, wgs84_bbox.xmin], [wgs84_bbox.ymax, wgs84_bbox.xmax]]

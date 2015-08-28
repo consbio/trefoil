@@ -35,6 +35,14 @@ This is a core dependency for ncdjango (public repo coming soon), our
 Django-based NetCDF map server.
 
 
+## Installation
+See ```requirements.txt``` for list of dependencies.
+
+On Windows, install as many of them as possible from [Python Windows Packages](http://www.lfd.uci.edu/~gohlke/pythonlibs/).
+
+
+
+
 ## Work in progress
 This is still under active development, as we have time and need.  All APIs are
 subject to change until we hit version 1.0.

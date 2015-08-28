@@ -12,21 +12,21 @@ import glob
 from itertools import product
 from collections import Iterable
 import json
-from math import ceil
 from netCDF4 import Dataset
 
 import click
 from pyproj import Proj
-from affine import Affine
 from rasterio import crs
-from rasterio.warp import RESAMPLING
+from rasterio.warp import RESAMPLING, calculate_default_transform
 
 from clover.render.renderers.utilities import renderer_from_dict
 from clover.netcdf.variable import SpatialCoordinateVariables
 from clover.geometry.bbox import BBox
-from clover.netcdf.crs import get_crs
+from clover.netcdf.warp import warp_array
+from clover.netcdf.crs import get_crs, is_geographic
 from clover.cli import cli
 from clover.cli.utilities import render_image, collect_statistics, colormap_to_stretched_renderer, palette_to_stretched_renderer
+from clover.cli.utilities import get_leaflet_anchors
 
 
 @cli.command(short_help="Render netcdf files to images")
@@ -45,12 +45,11 @@ from clover.cli.utilities import render_image, collect_statistics, colormap_to_s
 @click.option('--legend_breaks', default=None, type=click.INT, help='Number of breaks to show on legend for stretched renderer')
 @click.option('--legend_ticks', default=None, type=click.STRING, help='Legend tick values for stretched renderer')
 # Projection related options
-@click.option('--src_crs', default=None, type=click.STRING, help='Source coordinate reference system (limited to EPSG codes, e.g., EPSG:4326).  Will be read from file if not provided.')
-@click.option('--dst_crs', default=None, type=click.STRING, help='Destination coordinate reference system')
+@click.option('--src-crs', '--src_crs', default=None, type=click.STRING, help='Source coordinate reference system (limited to EPSG codes, e.g., EPSG:4326).  Will be read from file if not provided.')
+@click.option('--dst-crs', '--dst_crs', default=None, type=click.STRING, help='Destination coordinate reference system')
 @click.option('--res', default=None, type=click.FLOAT, help='Destination pixel resolution in destination coordinate system units' )
 @click.option('--resampling', default='nearest', type=click.Choice(('nearest', 'cubic', 'lanczos', 'mode')), help='Resampling method for reprojection (default: nearest')
 @click.option('--anchors', default=False, is_flag=True, help='Print anchor coordinates for use in Leaflet ImageOverlay')
-# TODO: option with transform info if not a geo format
 def render_netcdf(
         filename_pattern,
         variable,
@@ -138,7 +137,7 @@ def render_netcdf(
         legend_ticks = [float(v) for v in legend_ticks.split(',')]
 
     legend = renderer.get_legend(image_height=lh, breaks=legend_breaks, ticks=legend_ticks, max_precision=2)[0].to_image()
-    legend.save(os.path.join(output_directory, 'legend.png'))
+    legend.save(os.path.join(output_directory, '{0}_legend.png'.format(variable)))
 
 
     for filename in filenames:
@@ -147,73 +146,72 @@ def render_netcdf(
             filename_root = os.path.split(filename)[1].replace('.nc', '')
 
             if not variable in ds.variables:
-                raise click.BadParameter('variable {0} was not found in file: {1}'.format(variable, filename), param='variable', param_hint='VARIABLE')
+                raise click.BadParameter('variable {0} was not found in file: {1}'.format(variable, filename),
+                                         param='variable', param_hint='VARIABLE')
+
+            ds_crs = get_crs(ds, variable)
+            if not ds_crs and is_geographic(ds, variable):
+                ds_crs = 'EPSG:4326'  # Assume all geographic data is WGS84
+
+            src_crs = crs.from_string(ds_crs) if ds_crs else {'init': src_crs} if src_crs else None
 
             data = ds.variables[variable][:]
             num_dimensions = len(data.shape)
 
             # get transforms, assume last 2 dimensions on variable are spatial in row, col order
             y_dim, x_dim = ds.variables[variable].dimensions[-2:]
-            y_len, x_len = data.shape[-2:]
-            coords = SpatialCoordinateVariables.from_dataset(ds, x_dim, y_dim)#, projection=Proj(src_crs))
+            coords = SpatialCoordinateVariables.from_dataset(ds, x_dim, y_dim,
+                                                             projection=Proj(src_crs) if src_crs else None)
 
-            if coords.y.is_ascending_order():
-                if num_dimensions == 2:
-                    data = data[::-1]
-                else:
-                    data = data[:, ::-1]
-
+            flip_y = False
             reproject_kwargs = None
             if dst_crs is not None:
-                # TODO: extract this out into a general clover reprojection function
-                ds_crs = get_crs(ds, variable)
-                if not (src_crs or ds_crs):
-                    raise click.BadParameter('must provide src_crs to reproject', param='src_crs', param_hint='src_crs')
+                if not src_crs:
+                    raise click.BadParameter('must provide src_crs to reproject', param='--src-crs',
+                                             param_hint='--src-crs')
 
-                src_crs = crs.from_string(ds_crs) if ds_crs else {'init': src_crs}
-                coords.projection = Proj(src_crs)
+                dst_crs = crs.from_string(dst_crs)
 
-                dst_crs = {'init': dst_crs}
-
-                proj_bbox = coords.bbox.project(Proj(dst_crs))
-
-                x_dif = proj_bbox.xmax - proj_bbox.xmin
-                y_dif = proj_bbox.ymax - proj_bbox.ymin
-
-                total_len = float(x_len + y_len)
-                # Cellsize is dimension weighted average of x and y dimensions per projected pixel, unless otherwise provided
-                avg_cellsize = ((x_dif / float(x_len)) * (float(x_len) / total_len)) + ((y_dif / float(y_len)) * (float(y_len) / total_len))
-
-                cellsize = res or avg_cellsize
-                dst_affine = Affine(cellsize, 0, proj_bbox.xmin, 0, -cellsize, proj_bbox.ymax)
-                dst_shape = (
-                    max(int(ceil((y_dif) / cellsize)), 1),  # height
-                    max(int(ceil(x_dif / cellsize)), 1)  # width
+                src_height, src_width = coords.shape
+                dst_transform, dst_width, dst_height = calculate_default_transform(
+                    src_crs, dst_crs, src_width, src_height,
+                    *coords.bbox.as_list(), resolution=res
                 )
 
-                # TODO: replace with method in rasterio
                 reproject_kwargs = {
                     'src_crs': src_crs,
                     'src_transform': coords.affine,
                     'dst_crs': dst_crs,
-                    'dst_transform': dst_affine,
+                    'dst_transform': dst_transform,
                     'resampling': getattr(RESAMPLING, resampling),
-                    'dst_shape': dst_shape
+                    'dst_shape': (dst_height, dst_width)
                 }
 
-                if anchors:
-                    # Reproject the bbox of the output to WGS84
-                    full_bbox = BBox((dst_affine.c, dst_affine.f + dst_affine.e * dst_shape[0],
-                                     dst_affine.c + dst_affine.a * dst_shape[1], dst_affine.f),
-                                     projection=Proj(dst_crs))
-                    wgs84_bbox = full_bbox.project(Proj(init='EPSG:4326'))
-                    print('WGS84 Anchors: {0}'.format([[wgs84_bbox.ymin, wgs84_bbox.xmin], [wgs84_bbox.ymax, wgs84_bbox.xmax]]))
+            else:
+                dst_transform = coords.affine
+                dst_height, dst_width = coords.shape
+                dst_crs = src_crs
+
+                if coords.y.is_ascending_order():
+                    # Only needed if we are not already reprojecting the data, since that will flip it automatically
+                    flip_y = True
+
+
+            if anchors:
+                if not (dst_crs or src_crs):
+                    raise click.BadParameter('must provide at least src_crs to get Leaflet anchors',
+                                             param='--src-crs', param_hint='--src-crs')
+
+                anchors = get_leaflet_anchors(BBox.from_affine(dst_transform, dst_width, dst_height,
+                                                               projection=Proj(dst_crs) if dst_crs else None))
+                print('Anchors: {0}'.format(anchors))
 
 
             if num_dimensions == 2:
-                image_filename = os.path.join(output_directory,
-                                              '{0}.png'.format(filename_root))
-                render_image(renderer, data, image_filename, scale, reproject_kwargs=reproject_kwargs)
+                image_filename = os.path.join(output_directory, '{0}.png'.format(filename_root))
+                if reproject_kwargs:
+                    data = warp_array(data, **reproject_kwargs)
+                render_image(renderer, data, image_filename, scale, flip_y=flip_y)
 
             elif num_dimensions == 3:
                 if id_variable is not None:
@@ -221,12 +219,13 @@ def render_netcdf(
 
                 for index in range(data.shape[0]):
                     id = ds.variables[id_variable][index] if id_variable is not None else index
-                    image_filename = os.path.join(output_directory,
-                                                  '{0}__{1}.png'.format(filename_root, id))
-                    render_image(renderer, data[index], image_filename, scale, reproject_kwargs=reproject_kwargs)
+                    image_filename = os.path.join(output_directory, '{0}__{1}.png'.format(filename_root, id))
+                    if reproject_kwargs:
+                        data = warp_array(data, **reproject_kwargs)
+                    render_image(renderer, data[index], image_filename, scale, flip_y=flip_y)
 
             else:
-                # Assume last 2 components of shape are lat & lon, rest are
+                # Assume last 2 components of shape are lat & lon, rest are iterated over
                 id_variables = None
                 if id_variable is not None:
                     id_variables = id_variable.split(',')
@@ -255,6 +254,7 @@ def render_netcdf(
                             id_parts.append(str(dim_index))
 
                     combined_id = '_'.join(id_parts)
-                    image_filename = os.path.join(output_directory,
-                                                  '{0}__{1}.png'.format(filename_root, combined_id))
-                    render_image(renderer, data[combined_index], image_filename, scale, reproject_kwargs=reproject_kwargs)
+                    image_filename = os.path.join(output_directory, '{0}__{1}.png'.format(filename_root, combined_id))
+                    if reproject_kwargs:
+                        data = warp_array(data, **reproject_kwargs)
+                    render_image(renderer, data[combined_index], image_filename, scale, flip_y=flip_y)

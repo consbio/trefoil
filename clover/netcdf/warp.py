@@ -10,6 +10,35 @@ from clover.netcdf.utilities import copy_variable_dimensions, copy_variable, cop
 from clover.netcdf.variable import SpatialCoordinateVariables
 
 
+def warp_array(
+    arr,
+    src_crs,
+    src_transform,
+    dst_crs,
+    dst_transform,
+    dst_shape,
+    resampling=RESAMPLING.nearest):
+
+    """
+    Warp a 2D array using rasterio, reapplying the nodata mask if necessary
+    :param dst_shape: shape of destination array
+
+    All other parameters are the same as for rasterio.warp.reproject
+    """
+
+    with rasterio.drivers():
+        out = numpy.empty(shape=dst_shape, dtype=arr.dtype)
+        reproject(arr, out, src_crs=src_crs, src_transform=src_transform, dst_crs=dst_crs, dst_transform=dst_transform,
+                  resampling=resampling)
+
+        if hasattr(arr, 'fill_value'):
+            # Reapply mask
+            return numpy.ma.masked_array(out, mask=out == arr.fill_value)
+        else:
+            return out
+
+
+
 def warp_like(ds, ds_projection, variables, out_ds, template_ds, template_varname, resampling=RESAMPLING.nearest):
     """
     Warp one or more variables in a NetCDF file based on the coordinate reference system and

@@ -37,6 +37,16 @@ class BBox(object):
     def __repr__(self):
         return text_type(self.as_list())
 
+    @classmethod
+    def from_affine(cls, affine, width, height, projection=None):
+        """
+        Return new BBox object based on an Affine object
+        """
+        return cls(
+            (affine.c, affine.f + affine.e * height, affine.c + affine.a * width, affine.f),
+            projection=projection
+        )
+
     def clone(self):
         return copy.copy(self)
 
