@@ -36,7 +36,7 @@ def delta(baseline, files, variable, bidx, proportion, outdir):
             raise click.BadParameter('No files found matching pattern: {0}'.format(files), param='files', param_hint='files')
 
         for filename in filenames:
-            print 'Calculating delta against', filename
+            print('Calculating delta against', filename)
             with Dataset(filename) as comp_ds:
                 with Dataset(os.path.join(outdir, filename.replace('.nc', '_delta.nc')), 'w') as out_ds:
                     comp_var = comp_ds.variables[variable]

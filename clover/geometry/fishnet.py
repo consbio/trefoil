@@ -33,7 +33,7 @@ class Fishnet(object):
         #Note: per common convention, y is decreasing.  May not actually break the code, but block in case it does
         assert coordinates.y.values[0] > coordinates.y.values[-1]
 
-        print "Creating fishnet..."
+        print("Creating fishnet...")
 
         x_edges = coordinates.x.edges
         y_edges = coordinates.y.edges
@@ -87,7 +87,7 @@ class Fishnet(object):
         For each intersection between fishnet and geometry, update intersection_areas
         Geometry, fishnet, and spatial index must all be in same projection
         """
-        print 'Processing intersection'
+        print('Processing intersection')
         start = time.time()
         try:
             hits = list(self._index.intersection(geometry.bounds, objects='raw'))
@@ -102,14 +102,14 @@ class Fishnet(object):
                 elif geometry.intersects(poly):
                     intersection_areas[row][col] += geometry.intersection(poly).area
         finally:
-            print 'elapsed %.2f' % (time.time()-start)
+            print('elapsed %.2f' % (time.time()-start))
 
     def write_shapefile(self, filename, intersection_areas=None):
         """
         Write the fishnet and total areas, with intersection areas (if provided) to a shapefile
         """
 
-        print "Writing shapefile..."
+        print("Writing shapefile...")
         property_defs = [('row','int'), ('col','int'), ('total_area','float')]
         if intersection_areas is not None:
             assert intersection_areas.shape == self.total_areas.shape
