@@ -246,13 +246,14 @@ def render_netcdf(
                                                            projection=Proj(dst_crs) if dst_crs else None))
 
             if anchors:
-                print('Anchors: {0}'.format(leaflet_anchors))
+                click.echo('Anchors: {0}'.format(leaflet_anchors))
 
 
     layers = {}
     for filename in filenames:
         with Dataset(filename) as ds:
-            print 'Processing',filename
+            click.echo('Processing {0}'.format(filename))
+
             filename_root = os.path.split(filename)[1].replace('.nc', '')
 
             if not variable in ds.variables:
@@ -261,6 +262,8 @@ def render_netcdf(
 
             if not ds.variables[variable].dimensions == dimensions:
                 raise click.ClickException('All datasets must have the same dimensions for {0}'.format(variable))
+
+            data = ds.variables[variable][:]
 
             if num_dimensions == 2:
                 image_filename = os.path.join(output_directory, '{0}_{1}.png'.format(filename_root, variable))
