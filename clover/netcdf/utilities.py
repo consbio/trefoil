@@ -1,3 +1,4 @@
+import re
 import six
 from collections import OrderedDict
 import numpy
@@ -22,6 +23,8 @@ DEFAULT_FILL_VALUES.update({
     'uint8': 255,
     'uint16': 65535
 })
+
+NUMBER_REGEXP = re.compile('\d+')
 
 
 def get_fill_value_for_variable(variable):
@@ -370,3 +373,41 @@ def data_variables(ds):
     """
 
     return  OrderedDict([(k, v) for k, v in ds.variables.iteritems() if k not in ds.dimensions])
+
+
+def get_pack_atts(dtype, min_value, max_value):
+    """
+    Get attributes based on the data type and value range.
+
+    scale_factor and add_offset attributes will be set on variable according to formula described here:
+    http://nco.sourceforge.net/nco.html#Packed-data
+
+    scale_factor = (max_value - min_value) / (2**bits - 2)        where bits are the number of bits from data type
+    add_offset = min_value if unsigned data type, otherwise 0.5 * (min_value + max_value)
+
+    Parameters
+    ----------
+    dtype: a numpy dtype object or string (must be one of: int8, int16, int32, uint8, uint16, uint32)
+    min_value: number, minimum value of data to pack
+    max_value: number, maximum value of data to pack
+
+    Returns
+    -------
+    (scale_factor, add_offset)
+    """
+
+    if hasattr(dtype, 'name'):
+        dtype = dtype.name
+
+    if not dtype in ('int8', 'int16', 'int32', 'uint8', 'uint16', 'uint32'):
+        raise ValueError('data type for variable must be one of: int8, int16, int32, uint8, uint16, uint32')
+
+    if 'uint' in dtype:
+        offset = min_value
+    else:
+        offset = 0.5 * (min_value + max_value)
+
+    nbits = int(NUMBER_REGEXP.search(dtype).group())
+
+    scale = (max_value - min_value) / (2**nbits - 2)
+    return scale, offset

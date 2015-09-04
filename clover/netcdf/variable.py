@@ -302,13 +302,14 @@ class SpatialCoordinateVariables(object):
         )
 
     @staticmethod
-    def from_bbox(bbox, x_size, y_size):
+    def from_bbox(bbox, x_size, y_size, dtype='float32'):
         """
         Return a SpatialCoordinateVariables object from BBox and dimensions
 
         :param bbox: instance of a BBox, must have a projection
         :param x_size: number of pixels in x dimension (width or number of columns)
         :param y_size: number of pixels in y dimension (height or number of rows)
+        :param dtype: data type (string or numpy dtype object) of values
         :return: CoordinateVariables instance, assuming that rows are ordered in decreasing value
         """
 
@@ -318,8 +319,8 @@ class SpatialCoordinateVariables(object):
 
         x_pixel_size = (bbox.xmax - bbox.xmin) / float(x_size)
         y_pixel_size = (bbox.ymax - bbox.ymin) / float(y_size)
-        x = SpatialCoordinateVariable(numpy.arange(bbox.xmin + (x_pixel_size / 2.0), bbox.xmax, x_pixel_size))
-        y = SpatialCoordinateVariable(numpy.arange(bbox.ymax - (y_pixel_size / 2.0), bbox.ymin, -y_pixel_size))
+        x = SpatialCoordinateVariable(numpy.arange(bbox.xmin + (x_pixel_size / 2.0), bbox.xmax, x_pixel_size, dtype=dtype))
+        y = SpatialCoordinateVariable(numpy.arange(bbox.ymax - (y_pixel_size / 2.0), bbox.ymin, -y_pixel_size, dtype=dtype))
 
         return SpatialCoordinateVariables(x, y, bbox.projection)
 
@@ -327,12 +328,17 @@ class SpatialCoordinateVariables(object):
         x_var = self.x.add_to_dataset(dataset, x_name, **kwargs)
         y_var = self.y.add_to_dataset(dataset, y_name, **kwargs)
 
+        x_var.setncattr('axis', 'X')
+        y_var.setncattr('axis', 'Y')
+
         if self.projection:
             if self.projection.is_latlong():
                 x_var.setncattr('standard_name', 'longitude')
                 x_var.setncattr('long_name', 'longitude')
+                x_var.setncattr('units', 'degrees_east')
                 y_var.setncattr('standard_name', 'latitude')
                 y_var.setncattr('long_name', 'latitude')
+                y_var.setncattr('units', 'degrees_north')
 
             else:
                 x_var.setncattr('standard_name', 'projection_x_coordinate')

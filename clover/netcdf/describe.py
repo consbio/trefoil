@@ -3,7 +3,7 @@ from six import string_types
 from netCDF4 import Dataset
 from pyproj import Proj
 
-from clover.netcdf.crs import get_crs, PROJ4_GEOGRAPHIC
+from clover.netcdf.crs import get_crs, is_geographic, PROJ4_GEOGRAPHIC
 from clover.netcdf.utilities import get_ncattrs
 from clover.netcdf.variable import SpatialCoordinateVariable, SpatialCoordinateVariables, DateVariable
 
@@ -97,7 +97,7 @@ def describe(path_or_dataset):
                         if len(dataset.dimensions[dimension_name]) > 1:
                             time_variable_name = dimension_name
                 if x_variable_name and y_variable_name:
-                    if proj4 is None and x_variable_name in ('lon', 'long', 'longitude'):
+                    if proj4 is None and is_geographic(dataset, variable_name):
                         # Assume WGS84
                         proj4 = PROJ4_GEOGRAPHIC
 

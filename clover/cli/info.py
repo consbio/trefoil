@@ -7,7 +7,7 @@ from clover.netcdf.utilities import collect_statistics, get_dtype_string
 from clover.cli import cli
 
 
-def print_dict(d, precision=2, depth=0):
+def print_dict(d, depth=0):
     space = '  '
     keys = d.keys()
     keys.sort()
@@ -19,8 +19,9 @@ def print_dict(d, precision=2, depth=0):
             print('')
         else:
             if isinstance(value, float):
-                value = round(value, precision)
-            print('{0}{1}: {2}'.format(space * depth, key, value))
+                print('{0}{1}: {2:g}'.format(space * depth, key, value))
+            else:
+                print('{0}{1}: {2}'.format(space * depth, key, value))
 
 
 @cli.command(short_help='Describe netCDF files')
