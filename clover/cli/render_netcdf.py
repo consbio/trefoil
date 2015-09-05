@@ -178,19 +178,20 @@ def render_netcdf(
     legend.save(os.path.join(output_directory, '{0}_legend.png'.format(variable)))
 
     with Dataset(filenames[0]) as ds:
-        dimensions = ds.variables[variable].dimensions
-        data = ds.variables[variable][:]
-        num_dimensions = len(data.shape)
+        var_obj = ds.variables[variable]
+        dimensions = var_obj.dimensions
+        shape = var_obj.shape
+        num_dimensions = len(shape)
 
         if num_dimensions == 3:
             if id_variable:
-                if data.shape[0] != ds.variables[id_variable][:].shape[0]:
+                if shape[0] != ds.variables[id_variable][:].shape[0]:
                     raise click.BadParameter('must be same dimensionality as 3rd dimension of {0}'.format(variable),
                                              param='--id_variable', param_hint='--id_variable')
             else:
                 # Guess from the 3rd dimension
                 guess = dimensions[0]
-                if guess in ds.variables and ds.variables[guess][:].shape[0] == data.shape[0]:
+                if guess in ds.variables and ds.variables[guess][:].shape[0] == shape[0]:
                     id_variable = guess
 
         ds_crs = get_crs(ds, variable)
@@ -260,12 +261,12 @@ def render_netcdf(
                 raise click.BadParameter('variable {0} was not found in file: {1}'.format(variable, filename),
                                          param='variable', param_hint='VARIABLE')
 
-            if not ds.variables[variable].dimensions == dimensions:
+            var_obj = ds.variables[variable]
+            if not var_obj.dimensions == dimensions:
                 raise click.ClickException('All datasets must have the same dimensions for {0}'.format(variable))
 
-            data = ds.variables[variable][:]
-
             if num_dimensions == 2:
+                data = var_obj[:]
                 image_filename = os.path.join(output_directory, '{0}_{1}.png'.format(filename_root, variable))
                 if reproject_kwargs:
                     data = warp_array(data, **reproject_kwargs)
@@ -275,13 +276,13 @@ def render_netcdf(
                 layers[local_filename.replace('.png', '')] = local_filename
 
             elif num_dimensions == 3:
-                for index in range(data.shape[0]):
+                for index in range(shape[0]):
                     id = ds.variables[id_variable][index] if id_variable is not None else index
                     image_filename = os.path.join(output_directory, '{0}_{1}__{2}.png'.format(filename_root, variable, id))
-                    data_slice = data[index]
+                    data = var_obj[index]
                     if reproject_kwargs:
-                        data_slice = warp_array(data_slice, **reproject_kwargs)
-                    render_image(renderer, data_slice, image_filename, scale, flip_y=flip_y)
+                        data = warp_array(data, **reproject_kwargs)
+                    render_image(renderer, data, image_filename, scale, flip_y=flip_y)
 
                     local_filename = os.path.split(image_filename)[1]
                     layers[local_filename.replace('.png', '')] = local_filename

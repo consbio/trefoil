@@ -410,6 +410,8 @@ class DateVariable(CoordinateVariable):
         by CF convention.  Lame).
         """
 
+        assert calendar in ('360_day', 'gregorian', 'standard', 'julian', '360', 'noleap')
+
         super(DateVariable, self).__init__(input)
 
         if isinstance(input, Variable):
@@ -431,7 +433,7 @@ class DateVariable(CoordinateVariable):
             elif isinstance(self.values[0], datetime):
                 self.dates = self.values.copy()
 
-            self.values = date2num(self.dates, units=self.units, calendar=self.calendar)
+            self.values = numpy.array(date2num(self.dates, units=self.units, calendar=self.calendar), dtype=numpy.int32)
 
     @property
     def datetimes(self):

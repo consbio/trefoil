@@ -64,11 +64,14 @@ def describe(path_or_dataset):
         }
 
         if dtype not in ('str', ):
-            data = variable[:]
-            variable_info.update({
-                'min': data.min().item(),
-                'max': data.max().item()
-            })
+            try:
+                data = variable[:]
+                variable_info.update({
+                    'min': data.min().item(),
+                    'max': data.max().item()
+                })
+            except MemoryError:
+                pass  # TODO: find a better way to handle this
 
         if variable_name in dataset.dimensions and dtype not in ('str', ):
             dimension_variable = dataset.variables[variable_name]

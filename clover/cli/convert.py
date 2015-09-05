@@ -1,16 +1,22 @@
 import glob
+from datetime import datetime
+import re
 from netCDF4 import Dataset
 
+import numpy
 import click
 from pyproj import Proj
 import rasterio
 from rasterio import crs
 
 from clover.cli import cli
-from clover.netcdf.variable import SpatialCoordinateVariables
+from clover.netcdf.variable import SpatialCoordinateVariables, DateVariable
 from clover.netcdf.crs import set_crs
-from clover.netcdf.utilities import get_pack_atts
+from clover.netcdf.utilities import get_pack_atts, get_fill_value
 from clover.geometry.bbox import BBox
+
+
+DATE_REGEX = re.compile('%[yY]')  # TODO: add all appropriate strftime directives
 
 
 @cli.command(short_help='Convert rasters to NetCDF')
@@ -21,27 +27,28 @@ from clover.geometry.bbox import BBox
 @click.option('--src-crs', default=None, type=click.STRING, help='Source coordinate reference system (limited to EPSG codes, e.g., EPSG:4326).  Will be read from file if not provided.')
 @click.option('--x', 'x_name', type=click.STRING, help='Name of x dimension and variable (default: lon or x)')
 @click.option('--y', 'y_name', type=click.STRING, help='Name of y dimension and variable (default: lat or y)')
-@click.option('--z', 'z_name', type=click.STRING, help='Name of z dimension and variable (e.g., year)')
+@click.option('--z', 'z_name', type=click.STRING, default='time', help='Name of z dimension and variable', show_default=True)
 @click.option('--netcdf3', is_flag=True, default=False, help='Output in NetCDF3 version instead of NetCDF4')
 @click.option('--zip', is_flag=True, default=False, help='Use zlib compression of data and coordinate variables')
 @click.option('--packed', is_flag=True, default=False, help='Pack floating point values into an integer (will lose precision)')
 @click.option('--xy-dtype', type=click.Choice(['float32', 'float64']), default='float32', help='Data type of spatial coordinate variables.', show_default=True)
-@click.option('--z-dtype', type=click.Choice(['float32', 'float64', 'int8', 'int16', 'int32', 'uint8', 'uint16', 'uint32']), default=None, help='Data type of z variable.  Will be inferred from values if not provided.')
+# @click.option('--z-dtype', type=click.Choice(['float32', 'float64', 'int8', 'int16', 'int32', 'uint8', 'uint16', 'uint32']), default=None, help='Data type of z variable.  Will be inferred from values if not provided.')
+@click.option('--calendar', type=click.STRING, default='standard', help='Calendar to use if z dimension is a date type', show_default=True)
 def to_netcdf(
-        files,
-        output,
-        variable,
-        dtype,
-        src_crs,
-        x_name,
-        y_name,
-        z_name,
-        netcdf3,
-        zip,
-        packed,
-        xy_dtype,
-        z_dtype
-):
+    files,
+    output,
+    variable,
+    dtype,
+    src_crs,
+    x_name,
+    y_name,
+    z_name,
+    netcdf3,
+    zip,
+    packed,
+    xy_dtype,
+    # z_dtype,
+    calendar):
     """
     Convert rasters to NetCDF and stack them according to a dimension.
 
@@ -54,9 +61,41 @@ def to_netcdf(
 
     # TODO: add format string template to this to parse out components
     # Need to be able to sort things in the right order and stack them into the appropriate dimension
+    file_regex = None
+    date_format = ''
+    if '%' in files:
+        # Parse out dates according to datetime.strftime rules, replace
+        directives = re.findall(DATE_REGEX, files)
+
+        if not directives:
+            raise click.BadParameter('Invalid pattern', param='FILES', param_hint='FILES')
+
+        date_format = ''.join(directives)
+
+        for d in directives:
+            pattern = '[0-9][0-9]'
+            if d == '%Y':
+                pattern += pattern
+            file_regex = re.compile(pattern)
+            files = files.replace(d, pattern)
+
     filenames = glob.glob(files)
     if not filenames:
         raise click.BadParameter('No files found matching that pattern', param='files', param_hint='FILES')
+
+    z_values = []
+    if file_regex:
+        pairs = []
+        for filename in filenames:
+            date_obj = datetime.strptime(file_regex.search(filename).group(), date_format)
+            pairs.append((date_obj, filename))
+
+        # pairs = [(int(file_regex.search(f).group()), f) for f in filenames]
+        pairs = sorted(pairs, key=lambda x: x[0])
+        z_values = [item[0] for item in pairs]
+        filenames = [item[1] for item in pairs]
+
+    items = tuple(enumerate(filenames))
 
     has_z = len(filenames) > 1
 
@@ -76,14 +115,14 @@ def to_netcdf(
         prj = Proj(**src_crs)
         coords = SpatialCoordinateVariables.from_bbox(BBox(src.bounds, prj), src.width, src.height, xy_dtype)
         dtype = dtype or src.dtypes[0]
-        nodata = src.nodata
+        # nodata = src.nodata# if not dtype else get_fill_value(dtype) #FIXME - remove or fix
 
 
     x_name = x_name or ('lon' if crs.is_geographic_crs(src_crs) else 'x')
     y_name = y_name or ('lat' if crs.is_geographic_crs(src_crs) else 'y')
 
     var_kwargs = {
-        'fill_value': nodata
+        'fill_value': get_fill_value(dtype)
     }
 
     format = 'NETCDF3_CLASSIC' if netcdf3 else 'NETCDF4'
@@ -94,12 +133,16 @@ def to_netcdf(
         var_dimensions = [y_name, x_name]
         shape = list(coords.shape)
         if has_z:
-            shape.insert(len(filenames))
+            shape.insert(0, len(filenames))
             out.createDimension(z_name, shape[0])
             var_dimensions.insert(0, z_name)
             # TODO: create variable.  What type??
+            if z_values:
+                dates = DateVariable(numpy.array(z_values), units_start_date=z_values[0], calendar=calendar)
+                dates.add_to_dataset(out, z_name)
 
-        # click.echo('Creating {0}:{1} with shape {2}'.format(output, variable, shape))
+
+        click.echo('Creating {0}:{1} with shape {2}'.format(output, variable, shape))
 
         out_var = out.createVariable(variable, dtype, dimensions=var_dimensions,
                                      zlib=zip, **var_kwargs)
@@ -110,8 +153,8 @@ def to_netcdf(
             maxs = []
 
             click.echo('Collecting statistics for packing data...')
-            with click.progressbar(enumerate(filenames)) as items:
-                for index, filename in items:
+            with click.progressbar(items) as iter:
+                for index, filename in iter:
                     with rasterio.open(filename) as src:
                         d = src.read(masked=True)
                         mins.append(d.min())
@@ -124,9 +167,9 @@ def to_netcdf(
             out_var.setncattr('scale_factor', scale)
             out_var.setncattr('add_offset', offset)
 
-        click.echo('Reading input files...')
-        with click.progressbar(enumerate(filenames)) as items:
-            for index, filename in items:
+        click.echo('Copying data from input files...')
+        with click.progressbar(items) as iter:
+            for index, filename in iter:
                 with rasterio.open(filename) as src:
                     data = src.read(1, masked=True)
 

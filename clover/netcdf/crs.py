@@ -180,13 +180,14 @@ def set_crs(dataset, variable_name, projection, set_proj4_att=False):
 
     variable = dataset.variables[variable_name]
 
-    if set_proj4_att:
-        variable.setncattr(PROJ4_KEY, projection.srs)
-
     if 'epsg:' in projection.srs:
         proj_string = epsg_to_proj4(re.search('(?<=epsg:)\d+', projection.srs).group())
     else:
         proj_string = projection.srs
+
+    if set_proj4_att:
+        variable.setncattr(PROJ4_KEY, proj_string)
+
     proj_data = crs_utils.from_string(proj_string)
     proj_key = proj_data['proj']
     if not proj_key in PROJ4_CF_PARAM_MAP.keys():

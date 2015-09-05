@@ -20,7 +20,10 @@ def warp_array(
     resampling=RESAMPLING.nearest):
 
     """
-    Warp a 2D array using rasterio, reapplying the nodata mask if necessary
+    Warp a 2D array using rasterio.
+
+    All nodata values are filled in prior to warping, and masked back out later if necessary.
+
     :param dst_shape: shape of destination array
 
     All other parameters are the same as for rasterio.warp.reproject
@@ -28,14 +31,28 @@ def warp_array(
 
     with rasterio.drivers():
         out = numpy.empty(shape=dst_shape, dtype=arr.dtype)
-        reproject(arr, out, src_crs=src_crs, src_transform=src_transform, dst_crs=dst_crs, dst_transform=dst_transform,
-                  resampling=resampling)
 
+        fill = None
         if hasattr(arr, 'fill_value'):
-            # Reapply mask
-            return numpy.ma.masked_array(out, mask=out == arr.fill_value)
-        else:
-            return out
+            fill=arr.fill_value
+            arr = numpy.ma.filled(arr, arr.fill_value)
+
+        reproject(
+            arr,
+            out,
+            src_crs=src_crs,
+            src_transform=src_transform,
+            dst_crs=dst_crs,
+            dst_transform=dst_transform,
+            resampling=resampling,
+            src_nodata=fill,
+            dst_nodata=fill
+        )
+
+        if fill:
+            out = numpy.ma.masked_array(out, mask=out == fill)
+
+        return out
 
 
 

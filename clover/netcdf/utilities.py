@@ -5,26 +5,14 @@ import numpy
 import math
 from netCDF4 import Dataset, default_fillvals
 
-DEFAULT_FILL_VALUES = default_fillvals.copy()
-DEFAULT_FILL_VALUES.update({
-    # From Tim
-    'NC_FILL_BYTE':-127,
-    'NC_FILL_CHAR':0,
-    'NC_FILL_SHORT':-32767,
-    'NC_FILL_INT':-2147483647,
-    'NC_FILL_FLOAT':9.9692099683868690e+36,
-    'NC_FILL_DOUBLE':9.9692099683868690e+36,
-
-    'int8':-127,
-    'int16':-32767,
-    'float32':9.9692099683868690e+36,
-    'float64':9.9692099683868690e+36,
-    'int32':-2147483647,
-    'uint8': 255,
-    'uint16': 65535
-})
 
 NUMBER_REGEXP = re.compile('\d+')
+
+
+def get_fill_value(dtype):
+    if isinstance(dtype, six.string_types):
+        dtype = numpy.dtype(dtype)
+    return default_fillvals[dtype.str[1:]]
 
 
 def get_fill_value_for_variable(variable):
@@ -34,7 +22,7 @@ def get_fill_value_for_variable(variable):
         return variable._FillValue
     elif hasattr(variable, 'missing_value'):
         return variable.missing_value
-    return DEFAULT_FILL_VALUES[get_dtype_string(variable)]
+    return get_fill_value(variable.dtype)
 
 
 def get_dtype_string(variable):
@@ -377,13 +365,14 @@ def data_variables(ds):
 
 def get_pack_atts(dtype, min_value, max_value):
     """
-    Get attributes based on the data type and value range.
+    Get attributes based on the data type and value range.  Assumes that default fill values are used (top of data type
+    range for unsigned integer types).
 
     scale_factor and add_offset attributes will be set on variable according to formula described here:
     http://nco.sourceforge.net/nco.html#Packed-data
 
     scale_factor = (max_value - min_value) / (2**bits - 2)        where bits are the number of bits from data type
-    add_offset = min_value if unsigned data type, otherwise 0.5 * (min_value + max_value)
+    add_offset = min_value
 
     Parameters
     ----------
@@ -399,15 +388,10 @@ def get_pack_atts(dtype, min_value, max_value):
     if hasattr(dtype, 'name'):
         dtype = dtype.name
 
-    if not dtype in ('int8', 'int16', 'int32', 'uint8', 'uint16', 'uint32'):
-        raise ValueError('data type for variable must be one of: int8, int16, int32, uint8, uint16, uint32')
-
-    if 'uint' in dtype:
-        offset = min_value
-    else:
-        offset = 0.5 * (min_value + max_value)
+    if not dtype in ('uint8', 'uint16', 'uint32'):
+        raise ValueError('data type for variable must be one of: uint8, uint16, uint32')
 
     nbits = int(NUMBER_REGEXP.search(dtype).group())
 
     scale = (max_value - min_value) / (2**nbits - 2)
-    return scale, offset
+    return scale, min_value

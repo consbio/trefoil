@@ -1,14 +1,14 @@
-import click
 import os
 import glob
-from pyproj import Proj
 from netCDF4 import Dataset
+
+import click
 from rasterio.warp import RESAMPLING
+
 from clover.cli import cli
 from clover.netcdf.warp import warp_like
 from clover.netcdf.crs import get_crs
 from clover.netcdf.utilities import data_variables
-
 
 
 @cli.command(short_help="Warp NetCDF files to match a template")
