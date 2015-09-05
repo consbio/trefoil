@@ -260,7 +260,7 @@ def is_geographic(dataset, variable_name):
     )
 
     variable = dataset.variables[variable_name]
-    dim_names = set(variable.dimensions[-2:])
+    dim_names = set([d.lower() for d in variable.dimensions[-2:]])
 
     for option in options:
         if not option.difference(dim_names):

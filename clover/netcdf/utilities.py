@@ -360,7 +360,11 @@ def data_variables(ds):
     Returns subset of ds.variables that are data rather than dimension variables
     """
 
-    return  OrderedDict([(k, v) for k, v in ds.variables.iteritems() if k not in ds.dimensions])
+    vars_with_bounds = [v for v in ds.variables.values() if 'bounds' in v.ncattrs()]
+    bounds_vars = [v.getncattr('bounds') for v in vars_with_bounds]
+
+    return OrderedDict([(k, v) for k, v in ds.variables.iteritems()
+                        if k not in ds.dimensions and k not in bounds_vars])
 
 
 def get_pack_atts(dtype, min_value, max_value):
