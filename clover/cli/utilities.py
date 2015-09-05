@@ -17,7 +17,7 @@ def render_image(renderer, data, filename, scale=1, flip_y=False):
     img.save(filename)
 
 
-def colormap_to_stretched_renderer(colormap, colorspace='hsv', filenames=None, variable=None):
+def colormap_to_stretched_renderer(colormap, colorspace='hsv', filenames=None, variable=None, fill_value=None):
     statistics = None
     if 'min:' in colormap or 'max:' in colormap or 'mean' in colormap:
         if not filenames and variable:
@@ -34,7 +34,7 @@ def colormap_to_stretched_renderer(colormap, colorspace='hsv', filenames=None, v
             value = float(value)
         colors.append((value, Color.from_hex(color)))
 
-    return StretchedRenderer(colors, colorspace=colorspace)
+    return StretchedRenderer(colors, colorspace=colorspace, fill_value=fill_value)
 
 
 def palette_to_stretched_renderer(palette_path, values, filenames=None, variable=None):

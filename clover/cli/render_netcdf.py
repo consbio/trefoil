@@ -51,10 +51,11 @@ DEFAULT_PALETTES = {
 @click.argument('filename_pattern')
 @click.argument('variable')
 @click.argument('output_directory', type=click.Path())
-@click.option('--renderer_file', help='File containing renderer JSON', type=click.Path())
-@click.option('--save', default=False, is_flag=True, help='Save renderer to renderer_file')
+@click.option('--renderer_file', help='File containing renderer JSON', type=click.Path(exists=True))
+@click.option('--save', 'save_file', type=click.Path(), default=None, help='Save renderer to renderer_file')
 @click.option('--renderer_type', default='stretched', help='Name of renderer [default: stretched].  (other types not yet implemented)')
 @click.option('--colormap', default=None, help='Provide colormap as comma-separated lookup of value to hex color code.  (Example: -1:#FF0000,1:#0000FF)')
+@click.option('--fill', type=click.FLOAT, default=None, help='Fill value (will be rendered as transparent)')
 @click.option('--colorspace', default='hsv', type=click.Choice(['hsv', 'rgb']), help='Color interpolation colorspace')
 @click.option('--palette', default=None, help='Palettable color palette (Example: colorbrewer.sequential.Blues_3)')
 @click.option('--palette_stretch', default='min,max', help='Value range over which to apply the palette when using stretched renderer (comma-separated)', show_default=True)
@@ -75,9 +76,10 @@ def render_netcdf(
         variable,
         output_directory,
         renderer_file,
-        save,
+        save_file,
         renderer_type,
         colormap,
+        fill,
         colorspace,
         palette,
         palette_stretch,
@@ -115,7 +117,7 @@ def render_netcdf(
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
 
-    if renderer_file is not None and not save:
+    if renderer_file is not None and not save_file:
         if not os.path.exists(renderer_file):
             raise click.BadParameter('does not exist', param='renderer_file', param_hint='renderer_file')
 
@@ -152,23 +154,21 @@ def render_netcdf(
             else:
                 if colormap is None:
                     colormap = 'min:#000000,max:#FFFFFF'
-                renderer = colormap_to_stretched_renderer(colormap, colorspace, filenames, variable)
+                renderer = colormap_to_stretched_renderer(colormap, colorspace, filenames, variable, fill_value=fill)
         else:
             raise NotImplementedError('other renderers not yet built')
 
-    if save:
-        if not renderer_file:
-            raise click.BadParameter('must be provided to save', param='renderer_file', param_hint='renderer_file')
+    if save_file:
 
-        if os.path.exists(renderer_file):
-            with open(renderer_file, 'r+') as output_file:
+        if os.path.exists(save_file):
+            with open(save_file, 'r+') as output_file:
                 data = json.loads(output_file.read())
                 output_file.seek(0)
                 output_file.truncate()
                 data[variable] = renderer.serialize()
                 output_file.write(json.dumps(data, indent=4))
         else:
-            with open(renderer_file, 'w') as output_file:
+            with open(save_file, 'w') as output_file:
                 output_file.write(json.dumps({variable: renderer.serialize()}))
 
     if legend_ticks is not None and not legend_breaks:
