@@ -15,26 +15,27 @@ TODO:
 
 import os
 import glob
-from itertools import product
-from collections import Iterable
 import json
-from netCDF4 import Dataset
+import webbrowser
 
+import numpy
+from netCDF4 import Dataset
 import click
 from pyproj import Proj
 from rasterio import crs
 from rasterio.warp import RESAMPLING, calculate_default_transform
 from jinja2 import Environment, PackageLoader
-import webbrowser
 
 from clover.render.renderers.utilities import renderer_from_dict
 from clover.netcdf.variable import SpatialCoordinateVariables
 from clover.geometry.bbox import BBox
+from clover.netcdf.utilities import resolve_dataset_variable
 from clover.netcdf.warp import warp_array
 from clover.netcdf.crs import get_crs, is_geographic
 from clover.cli import cli
 from clover.cli.utilities import render_image, collect_statistics, colormap_to_stretched_renderer, palette_to_stretched_renderer
 from clover.cli.utilities import get_leaflet_anchors
+
 
 
 # Common defaults for usability wins
@@ -71,6 +72,8 @@ DEFAULT_PALETTES = {
 @click.option('--resampling', default='nearest', type=click.Choice(('nearest', 'cubic', 'lanczos', 'mode')), help='Resampling method for reprojection (default: nearest')
 @click.option('--anchors', default=False, is_flag=True, help='Print anchor coordinates for use in Leaflet ImageOverlay')
 @click.option('--map', 'interactive_map', default=False, is_flag=True, help='Open in interactive map')
+# Other options
+@click.option('--mask', 'mask_path', default=None, help='Mask dataset:variable (e.g., mask.nc:mask).  Mask variable assumed to be named "mask" unless otherwise provided')
 def render_netcdf(
         filename_pattern,
         variable,
@@ -93,7 +96,8 @@ def render_netcdf(
         res,
         resampling,
         anchors,
-        interactive_map):
+        interactive_map,
+        mask_path):
     """
     Render netcdf files to images.
 
@@ -102,6 +106,10 @@ def render_netcdf(
     --dst-crs is ignored if using --map option (always uses EPSG:3857
 
     If no colormap or palette is provided, a default palette may be chosen based on the name of the variable.
+
+    If provided, mask must be 1 for areas to be masked out, and 0 otherwise.  It
+    must be in the same CRS as the input datasets, and have the same spatial
+    dimensions.
 
     """
 
@@ -202,14 +210,37 @@ def render_netcdf(
 
         # get transforms, assume last 2 dimensions on variable are spatial in row, col order
         y_dim, x_dim = dimensions[-2:]
-        coords = SpatialCoordinateVariables.from_dataset(ds, x_dim, y_dim,
-                                                         projection=Proj(src_crs) if src_crs else None)
+        coords = SpatialCoordinateVariables.from_dataset(
+            ds, x_dim, y_dim, projection=Proj(src_crs) if src_crs else None
+        )
+
+        mask = None
+        if mask_path is not None:
+            mask_path, mask_variable = resolve_dataset_variable(mask_path)
+            if not mask_variable:
+                mask_variable = 'mask'
+
+            with Dataset(mask_path) as mask_ds:
+                if not mask_variable in mask_ds.variables:
+                    raise click.BadParameter(
+                        'mask variable not found: {0}'.format(mask_variable),
+                         param='--mask', param_hint='--mask'
+                    )
+
+                mask = mask_ds.variables[mask_variable][:].astype('bool')
+                if not mask.shape == shape[-2:]:
+                    raise click.BadParameter(
+                        'mask variable shape does not match shape of input spatial dimensions',
+                        param='--mask', param_hint='--mask'
+                    )
+
 
         flip_y = False
         reproject_kwargs = None
         if dst_crs is not None:
             if not src_crs:
-                raise click.BadParameter('must provide src_crs to reproject', param='--src-crs',
+                raise click.BadParameter('must provide src_crs to reproject',
+                                         param='--src-crs',
                                          param_hint='--src-crs')
 
             dst_crs = crs.from_string(dst_crs)
@@ -267,6 +298,8 @@ def render_netcdf(
 
             if num_dimensions == 2:
                 data = var_obj[:]
+                if mask is not None:
+                    data = numpy.ma.masked_array(data, mask=mask)
                 image_filename = os.path.join(output_directory, '{0}_{1}.png'.format(filename_root, variable))
                 if reproject_kwargs:
                     data = warp_array(data, **reproject_kwargs)
@@ -280,6 +313,8 @@ def render_netcdf(
                     id = ds.variables[id_variable][index] if id_variable is not None else index
                     image_filename = os.path.join(output_directory, '{0}_{1}__{2}.png'.format(filename_root, variable, id))
                     data = var_obj[index]
+                    if mask is not None:
+                        data = numpy.ma.masked_array(data, mask=mask)
                     if reproject_kwargs:
                         data = warp_array(data, **reproject_kwargs)
                     render_image(renderer, data, image_filename, scale, flip_y=flip_y)

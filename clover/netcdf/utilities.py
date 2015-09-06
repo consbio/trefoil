@@ -1,3 +1,4 @@
+import os
 import re
 import six
 from collections import OrderedDict
@@ -399,3 +400,27 @@ def get_pack_atts(dtype, min_value, max_value):
 
     scale = (max_value - min_value) / (2**nbits - 2)
     return scale, min_value
+
+
+def resolve_dataset_variable(path):
+    """
+    Resolves a dataset plus variable path into a dataset path and
+    variable name.
+
+    example: "/tmp/foo.nc:bar" -> ("/tmp/foo.nc", "bar")
+
+    Parameters
+    ----------
+    path: string, a compound path of dataset:variable
+
+    Returns
+    -------
+    tuple of dataset and variable
+    """
+
+    path, dataset = os.path.split(path)
+    variable = None
+    if ':' in dataset:
+        dataset, variable = dataset.split(':')
+
+    return os.path.join(path, dataset), variable
