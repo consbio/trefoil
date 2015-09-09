@@ -1,13 +1,12 @@
 Numpy
 netCDF4>=1.1.1
 affine>=1.0
-Pillow>=2.7.0
+Pillow>=2.9.0
 six
 rasterio>=0.26
 click
 pytz
 palettable
 pyproj
-jinja2
-shapely
+jinja2shapely
 fiona>=1.6.0

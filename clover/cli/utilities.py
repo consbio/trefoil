@@ -1,6 +1,7 @@
 import importlib
 
 import click
+import os
 import numpy
 from PIL.Image import ANTIALIAS
 from pyproj import Proj
@@ -19,7 +20,12 @@ def render_image(renderer, data, filename, scale=1, flip_y=False):
     img = renderer.render_image(data)
     if scale != 1:
         img = img.resize((numpy.array(data.shape[::-1]) * scale).astype(numpy.uint), ANTIALIAS)
-    img.save(filename)
+
+    kwargs = {}
+    if os.path.splitext(filename)[1].lower() == '.png':
+        kwargs['optimize'] = True
+
+    img.save(filename, **kwargs)
 
 
 def colormap_to_stretched_renderer(colormap, colorspace='hsv', filenames=None, variable=None, fill_value=None, mask=None):
@@ -54,7 +60,6 @@ def palette_to_stretched_renderer(palette_path, values, filenames=None, variable
     if not len(values) > 1:
         raise ValueError('Must provide at least 2 values for palette-based stretched renderer')
 
-    statistics = None
     if 'min' in values or 'max' in values:
         if not filenames and variable:
             raise ValueError('filenames and variable are required inputs to use palette with statistics')
@@ -103,7 +108,6 @@ def get_leaflet_anchors(bbox):
 
     wgs84_bbox = bbox.project(Proj(init='EPSG:4326'))
     return [[wgs84_bbox.ymin, wgs84_bbox.xmin], [wgs84_bbox.ymax, wgs84_bbox.xmax]]
-
 
 def get_mask(mask_path):
     """

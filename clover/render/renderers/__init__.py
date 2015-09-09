@@ -21,6 +21,8 @@ class RasterRenderer(object):
 
         if background_color is not None:
             assert isinstance(background_color, Color)
+        else:
+            background_color = Color(0, 0, 0, 0)
 
         self.colormap = list(colormap)
         self.fill_value = fill_value
@@ -51,32 +53,32 @@ class RasterRenderer(object):
         Mask out the fill value, if set.  Always return an instance of a masked array.
         """
 
-        if self.fill_value is not None:
-            return numpy.ma.masked_array(data, mask=data == self.fill_value)
-        else:
-            return numpy.ma.masked_array(data)
+        mask = False if self.fill_value is None else (data == self.fill_value)
+        return numpy.ma.masked_array(data, mask=mask)
+        #
+        # if self.fill_value is not None:
+        #     return numpy.ma.masked_array(data, mask=data == self.fill_value)
+        # else:
+        #     return numpy.ma.masked_array(data)
 
-    def _set_image_palette(self, image):
+    def _create_image(self, image_data, size):
         """
-        Set palette into PIL image.  Only RGB values are used.
-        TODO: figure out how to simply add transparency to palette
+        Creates image, setting background color into image and palette
         """
+        background_index = self.palette.shape[0]
+        if hasattr(image_data, 'mask'):
+            image_data = image_data.filled(background_index)
+
+        image = Image.frombuffer("P", size, image_data, "raw", "P", 0, 1)
 
         palette = self.palette[..., :3].flatten().tolist()
-        if self.background_color is not None:
-            assert isinstance(self.background_color, Color)
-            palette.extend(self.background_color.to_tuple()[:3])
+        # Append background color
+        palette.extend(self.background_color.to_tuple()[:3])
         image.putpalette(palette, "RGB")
 
-    def _apply_transparency_mask_to_image(self, image, mask):
-        """
-        Apply mask as transparency layer in image.  Convert it to RGBA if necessary.
-        :param mask: boolean numpy array, where True indicates pixels to set as transparent
-        """
+        if self.background_color.alpha == 0:
+            image.info['transparency'] = background_index
 
-        if not image.mode == "RGBA":
-            image = image.convert("RGBA")
-        image.putalpha(Image.frombuffer("L", image.size, (mask * 255).astype(numpy.uint8), "raw", "L", 0, 1))
         return image
 
     def serialize(self):
@@ -87,6 +89,7 @@ class RasterRenderer(object):
         }
         if self.fill_value is not None:
             ret['options'] = {'fill_value': self.fill_value}
+        # TODO: background color
 
         return ret
 
