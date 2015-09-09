@@ -55,11 +55,6 @@ class RasterRenderer(object):
 
         mask = False if self.fill_value is None else (data == self.fill_value)
         return numpy.ma.masked_array(data, mask=mask)
-        #
-        # if self.fill_value is not None:
-        #     return numpy.ma.masked_array(data, mask=data == self.fill_value)
-        # else:
-        #     return numpy.ma.masked_array(data)
 
     def _create_image(self, image_data, size):
         """
