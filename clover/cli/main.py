@@ -1,6 +1,6 @@
 from clover.cli import cli
 
-from clover.cli.calc import delta
+from clover.cli.calc import delta, bin_ts
 from clover.cli.convert import to_netcdf
 from clover.cli.extract import extract
 from clover.cli.info import describe, variables, stats

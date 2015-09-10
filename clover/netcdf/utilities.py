@@ -115,6 +115,10 @@ def copy_attributes(source, target, attribute_names, overwrite=True):
     """
 
     for attribute_name in attribute_names:
+        # Skip protected attributes that must be set in other ways
+        if attribute_name in ('_FillValue'):
+            continue
+
         if hasattr(target, attribute_name) and not overwrite:
             raise Exception("Attribute already exists in target, but overwrite is false")
         setattr(target, attribute_name, getattr(source, attribute_name))

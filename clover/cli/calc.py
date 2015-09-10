@@ -3,7 +3,7 @@ import glob
 import numpy
 import click
 from netCDF4 import Dataset
-from clover.netcdf.utilities import copy_variable_dimensions
+from clover.netcdf.utilities import copy_variable_dimensions, copy_variable, get_fill_value, copy_attributes
 from clover.cli import cli
 
 
@@ -52,3 +52,78 @@ def delta(baseline, files, variable, bidx, proportion, outdir):
 
                     else:
                         out_var[:] = calculate_delta(baseline_data, comp_data, proportion)
+
+
+#All files must have the same dimensions, and variable must have 3 dimensions with the first being time
+@cli.command(short_help='Bin time series data by interval')
+@click.argument('files')
+@click.argument('variable')
+@click.option('--outdir', default='./', help='Output directory')
+@click.option('--statistic', type=click.Choice(['mean', 'sum']), default='mean', help='Statistic for aggregating data', show_default=True)
+@click.option('--interval', type=click.INT, default=1, help='Interval in number of time steps for aggregating data', show_default=True)
+@click.option('--zip', 'zlib', is_flag=True, default=False, help='Use zlib compression of data and coordinate variables')
+def bin_ts(files, variable, outdir, statistic, interval, zlib):
+    """
+    Bin time series data by an interval, according to a statistic.
+
+
+    """
+
+    if not interval > 0:
+        raise click.BadParameter('must be > 0', param='--interval', param_hint='--interval')
+
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
+
+    filenames = glob.glob(files)
+    if not filenames:
+        raise click.BadParameter('No files found matching pattern: {0}'.format(files), param='files', param_hint='files')
+
+    for filename in filenames:
+        click.echo('Aggregating data for {0}'.format(filename))
+
+        with Dataset(filename) as ds:
+            if not variable in ds.variables:
+                raise click.BadParameter('variable {0} was not found in file: {1}'.format(variable, filename),
+                                         param='variable', param_hint='VARIABLE')
+            var_obj = ds.variables[variable]
+
+            if not len(var_obj.dimensions) == 3:
+                raise click.BadParameter('variable {0} must have 3 dimensions: {1}'.format(variable, filename),
+                                         param='variable', param_hint='VARIABLE')
+
+            spatial_dims = var_obj.dimensions[-2:]
+            z_dim = var_obj.dimensions[0]
+            num_intervals = var_obj.shape[0] / interval
+
+            if var_obj.shape[0] % interval != 0:
+                click.echo('WARNING: Anything beyond the last full interval will be dropped')
+
+            with Dataset(os.path.join(outdir, filename.replace('.nc', '_bin.nc')), 'w') as out_ds:
+                for dim in spatial_dims:
+                    copy_variable(ds, out_ds, dim, zlib=zlib)
+
+                out_ds.createDimension(z_dim, num_intervals)
+                if z_dim in ds.variables:
+                    z_var = ds.variables[z_dim]
+                    out_z_var = out_ds.createVariable(
+                        z_dim, z_var.dtype, dimensions=(z_dim,), fill_value=get_fill_value(z_var.dtype), zlib=zlib
+                    )
+                    copy_attributes(z_var, out_z_var, z_var.ncattrs())
+                    out_z_var[:] = z_var[:num_intervals*interval:interval]
+
+                out_var = out_ds.createVariable(
+                    variable, var_obj.dtype, dimensions=var_obj.dimensions,
+                    fill_value=get_fill_value(var_obj.dtype), zlib=zlib
+                )
+                copy_attributes(var_obj, out_var, var_obj.ncattrs())
+
+                # Due to memory issues, we have to do this more carefully than existing method in analysis.summary.statistic_by_interval
+                # TODO: pick appropriate approach based on total size of array
+                for i in range(num_intervals):
+                    subset = var_obj[i*interval:(i+1)*interval]
+
+                    if statistic == 'mean':
+                        out_var[i] = subset.mean(axis=0)
+                    elif statistic == 'sum':
+                        out_var[i] = subset.sum(axis=0)
