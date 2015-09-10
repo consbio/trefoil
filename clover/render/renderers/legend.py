@@ -1,6 +1,8 @@
 from base64 import b64encode
 from PIL import Image, ImageDraw, ImageFont
 from six import BytesIO
+from clover.utilities.image import autocrop
+
 
 class LegendElement(object):
     def __init__(self, image, ticks, labels):
@@ -54,3 +56,24 @@ class LegendElement(object):
             canvas.text((label_x, label_y), label, font=font, fill=(0,0,0,255))
 
         return img
+
+
+def composite_elements(elements, padding=0):
+    """
+    Return a new image created from compositing elements together, starting from
+    the top of the image.
+    """
+
+    images = [autocrop(e.to_image()) for e in elements]
+    widths = [i.size[0] for i in images]
+    heights = [i.size[1] for i in images]
+
+    img = Image.new("RGBA", (max(widths), sum(heights) + len(heights) * padding),
+                    color=(255, 255, 255, 0))
+
+    offset = 0
+    for index, element_image in enumerate(images):
+        img.paste(element_image, (0, offset))
+        offset += element_image.size[1] + padding
+
+    return img

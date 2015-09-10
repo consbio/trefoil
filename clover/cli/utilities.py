@@ -5,6 +5,7 @@ from pyproj import Proj
 from clover.utilities.color import Color
 from clover.netcdf.utilities import collect_statistics
 from clover.render.renderers.stretched import StretchedRenderer
+from clover.render.renderers.classified import ClassifiedRenderer
 
 
 def render_image(renderer, data, filename, scale=1, flip_y=False):
@@ -37,9 +38,13 @@ def colormap_to_stretched_renderer(colormap, colorspace='hsv', filenames=None, v
     return StretchedRenderer(colors, colorspace=colorspace, fill_value=fill_value)
 
 
-def palette_to_stretched_renderer(palette_path, values, filenames=None, variable=None):
+def get_palette(palette_path):
     index = palette_path.rindex('.')
-    palette = getattr(importlib.import_module('palettable.' + palette_path[:index]), palette_path[index+1:])
+    return getattr(importlib.import_module('palettable.' + palette_path[:index]), palette_path[index+1:])
+
+
+def palette_to_stretched_renderer(palette_path, values, filenames=None, variable=None, fill_value=None):
+    palette = get_palette(palette_path)
 
     values = values.split(',')
     if not len(values) > 1:
@@ -71,7 +76,20 @@ def palette_to_stretched_renderer(palette_path, values, filenames=None, variable
 
     colors.append((values[-1], Color.from_hex(hex_colors[-1])))
 
-    return StretchedRenderer(colors, colorspace='rgb')  # I think all palettable palettes are in RGB ramps
+    return StretchedRenderer(colors, colorspace='rgb', fill_value=fill_value)  # I think all palettable palettes are in RGB ramps
+
+
+def palette_to_classified_renderer(palette_path, filenames, variable, method='equal', fill_value=None):
+    palette = get_palette(palette_path)
+    num_breaks = palette.number
+    colors = [Color(r, g, b) for (r, g, b) in palette.colors]
+
+    if method == 'equal':
+        statistics = collect_statistics(filenames, (variable,))[variable]
+        step = (statistics['max'] - statistics['min']) / num_breaks
+        breaks = numpy.linspace(statistics['min'] + step, statistics['max'], num_breaks)
+
+    return ClassifiedRenderer(zip(breaks, colors), fill_value=fill_value)
 
 
 def get_leaflet_anchors(bbox):

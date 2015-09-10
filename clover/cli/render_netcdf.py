@@ -27,13 +27,14 @@ from rasterio.warp import RESAMPLING, calculate_default_transform
 from jinja2 import Environment, PackageLoader
 
 from clover.render.renderers.utilities import renderer_from_dict
+from clover.render.renderers.legend import composite_elements
 from clover.netcdf.variable import SpatialCoordinateVariables
 from clover.geometry.bbox import BBox
 from clover.netcdf.utilities import resolve_dataset_variable
 from clover.netcdf.warp import warp_array
 from clover.netcdf.crs import get_crs, is_geographic
 from clover.cli import cli
-from clover.cli.utilities import render_image, collect_statistics, colormap_to_stretched_renderer, palette_to_stretched_renderer
+from clover.cli.utilities import render_image, collect_statistics, colormap_to_stretched_renderer, palette_to_stretched_renderer, palette_to_classified_renderer
 from clover.cli.utilities import get_leaflet_anchors
 
 
@@ -54,7 +55,7 @@ DEFAULT_PALETTES = {
 @click.argument('output_directory', type=click.Path())
 @click.option('--renderer_file', help='File containing renderer JSON', type=click.Path(exists=True))
 @click.option('--save', 'save_file', type=click.Path(), default=None, help='Save renderer to renderer_file')
-@click.option('--renderer_type', default='stretched', help='Name of renderer [default: stretched].  (other types not yet implemented)')
+@click.option('--renderer_type', type=click.Choice(['stretched', 'classified']), default='stretched', help='Name of renderer.', show_default=True)
 @click.option('--colormap', default=None, help='Provide colormap as comma-separated lookup of value to hex color code.  (Example: -1:#FF0000,1:#0000FF)')
 @click.option('--fill', type=click.FLOAT, default=None, help='Fill value (will be rendered as transparent)')
 @click.option('--colorspace', default='hsv', type=click.Choice(['hsv', 'rgb']), help='Color interpolation colorspace')
@@ -153,18 +154,23 @@ def render_netcdf(
 
         if renderer_type == 'stretched':
             if palette is not None:
-                renderer = palette_to_stretched_renderer(palette, palette_stretch, filenames, variable)
+                renderer = palette_to_stretched_renderer(palette, palette_stretch, filenames, variable, fill_value=fill)
 
             elif colormap is None and variable in DEFAULT_PALETTES:
                 palette, palette_stretch = DEFAULT_PALETTES[variable]
-                renderer = palette_to_stretched_renderer(palette, palette_stretch, filenames, variable)
+                renderer = palette_to_stretched_renderer(palette, palette_stretch, filenames, variable, fill_value=fill)
 
             else:
                 if colormap is None:
                     colormap = 'min:#000000,max:#FFFFFF'
                 renderer = colormap_to_stretched_renderer(colormap, colorspace, filenames, variable, fill_value=fill)
-        else:
-            raise NotImplementedError('other renderers not yet built')
+
+        elif renderer_type == 'classified':
+            if not palette:
+                raise click.BadParameter('palette required for classified (for now)',
+                                         param='--palette', param_hint='--palette')
+
+            renderer = palette_to_classified_renderer(palette, filenames, variable, method='equal', fill_value=fill)  # TODO: other methods
 
     if save_file:
 
@@ -179,10 +185,15 @@ def render_netcdf(
             with open(save_file, 'w') as output_file:
                 output_file.write(json.dumps({variable: renderer.serialize()}))
 
-    if legend_ticks is not None and not legend_breaks:
-        legend_ticks = [float(v) for v in legend_ticks.split(',')]
+    if renderer_type == 'stretched':
+        if legend_ticks is not None and not legend_breaks:
+            legend_ticks = [float(v) for v in legend_ticks.split(',')]
 
-    legend = renderer.get_legend(image_height=lh, breaks=legend_breaks, ticks=legend_ticks, max_precision=2)[0].to_image()
+        legend = renderer.get_legend(image_height=lh, breaks=legend_breaks, ticks=legend_ticks, max_precision=2)[0].to_image()
+
+    elif renderer_type == 'classified':
+        legend = composite_elements(renderer.get_legend())
+
     legend.save(os.path.join(output_directory, '{0}_legend.png'.format(variable)))
 
     with Dataset(filenames[0]) as ds:
