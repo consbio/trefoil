@@ -114,15 +114,22 @@ def to_netcdf(
 
         prj = Proj(**src_crs)
         coords = SpatialCoordinateVariables.from_bbox(BBox(src.bounds, prj), src.width, src.height, xy_dtype)
-        dtype = dtype or src.dtypes[0]
-        # nodata = src.nodata# if not dtype else get_fill_value(dtype) #FIXME - remove or fix
+        src_dtype = numpy.dtype(src.dtypes[0])
+        dtype = numpy.dtype(dtype) if dtype else src_dtype
 
+        if dtype == src_dtype:
+            fill_value = src.nodata
+            if src_dtype.kind in ('u', 'i'):
+                # nodata always comes from rasterio as floating point
+                fill_value = int(fill_value)
+        else:
+            fill_value = get_fill_value(dtype)
 
     x_name = x_name or ('lon' if crs.is_geographic_crs(src_crs) else 'x')
     y_name = y_name or ('lat' if crs.is_geographic_crs(src_crs) else 'y')
 
     var_kwargs = {
-        'fill_value': get_fill_value(dtype)
+        'fill_value': fill_value
     }
 
     format = 'NETCDF3_CLASSIC' if netcdf3 else 'NETCDF4'
@@ -177,3 +184,5 @@ def to_netcdf(
                         out_var[index, :] = data
                     else:
                         out_var[:] = data
+
+                out.sync()
