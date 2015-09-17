@@ -31,8 +31,11 @@ living within clover.
 
 
 ## Where is it being used?
-This is a core dependency for ncdjango (public repo coming soon), our 
+This is a core dependency for [ncdjango](https://github.com/consbio/ncdjango), our 
 Django-based NetCDF map server.
+
+We are using this on a variety of internal projects within the Conservation
+Biology Institute.
 
 
 ## Installation
@@ -41,6 +44,9 @@ See ```requirements.txt``` for list of dependencies.
 On Windows, install as many of them as possible from [Python Windows Packages](http://www.lfd.uci.edu/~gohlke/pythonlibs/).
 
 
+## Command line interface
+This is currently undergoing heavy development.  
+See [CLI docs](tree/master/docs/cli.md) for more information.
 
 
 ## Work in progress

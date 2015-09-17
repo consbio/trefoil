@@ -18,7 +18,7 @@ from clover.netcdf.utilities import data_variables, get_fill_value
 @cli.command(short_help='Create a NetCDF mask from a shapefile')
 @file_in_arg
 @file_out_arg
-@click.option('--variable', type=click.STRING, default='mask', help='Name of output mask variable')
+@click.option('--variable', type=click.STRING, default='mask', help='Name of output mask variable', show_default=True)
 @click.option('--like', help='Template NetCDF dataset', type=click.Path(exists=True), required=True)
 @click.option('--netcdf3', is_flag=True, default=False, help='Output in NetCDF3 version instead of NetCDF4')
 @click.option('--all-touched', is_flag=True, default=False, help='Turn all touched pixels into mask (otherwise only pixels with centroid in features)')
