@@ -46,7 +46,7 @@ On Windows, install as many of them as possible from [Python Windows Packages](h
 
 ## Command line interface
 This is currently undergoing heavy development.  
-See [CLI docs](tree/master/docs/cli.md) for more information.
+See [CLI docs](https://github.com/consbio/clover/blob/master/docs/cli.md) for more information.
 
 
 ## Work in progress
@@ -75,4 +75,4 @@ and [Ken Ferschweiler](http://consbio.org/people/staff/ken-ferschweiler).
 * [rasterio](https://github.com/mapbox/rasterio): Geospatial I/O and operations on rasters, done right.
 * [OCGIS](https://github.com/NCPP/ocgis): Geoprocessing on CF compatible climate datasets.
 * [scikit-image](http://scikit-image.org/): Python image processing
-* [python-raster-stats](https://github.com/perrygeo/python-raster-stats): Summary statistics of rasters using geometries
+* [python-rasterstats](https://github.com/perrygeo/python-rasterstats): Summary statistics of rasters using geometries
