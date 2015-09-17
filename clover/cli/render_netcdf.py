@@ -30,12 +30,13 @@ from clover.render.renderers.utilities import renderer_from_dict
 from clover.render.renderers.legend import composite_elements
 from clover.netcdf.variable import SpatialCoordinateVariables
 from clover.geometry.bbox import BBox
-from clover.netcdf.utilities import resolve_dataset_variable
 from clover.netcdf.warp import warp_array
 from clover.netcdf.crs import get_crs, is_geographic
 from clover.cli import cli
-from clover.cli.utilities import render_image, collect_statistics, colormap_to_stretched_renderer, palette_to_stretched_renderer, palette_to_classified_renderer
-from clover.cli.utilities import get_leaflet_anchors
+from clover.cli.utilities import (
+    render_image, collect_statistics, colormap_to_stretched_renderer,
+    palette_to_stretched_renderer, palette_to_classified_renderer,
+    get_leaflet_anchors, get_mask)
 
 
 
@@ -118,13 +119,14 @@ def render_netcdf(
     if interactive_map:
         dst_crs = 'EPSG:3857'
 
-
     filenames = glob.glob(filename_pattern)
     if not filenames:
         raise click.BadParameter('No files found matching that pattern', param='filename_pattern', param_hint='FILENAME_PATTERN')
 
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
+
+    mask = get_mask(mask_path) if mask_path is not None else None
 
     if renderer_file is not None and not save_file:
         if not os.path.exists(renderer_file):
@@ -139,7 +141,7 @@ def render_netcdf(
         if renderer_dict['type'] == 'stretched':
             colors = ','.join([str(c[0]) for c in renderer_dict['colors']])
             if 'min' in colors or 'max' in colors or 'mean' in colors:
-                statistics = collect_statistics(filenames, (variable,))[variable]
+                statistics = collect_statistics(filenames, (variable,), mask=mask)[variable]
                 for entry in renderer_dict['colors']:
                     if isinstance(entry[0], basestring):
                         if entry[0] in ('min', 'max', 'mean'):
@@ -154,23 +156,23 @@ def render_netcdf(
 
         if renderer_type == 'stretched':
             if palette is not None:
-                renderer = palette_to_stretched_renderer(palette, palette_stretch, filenames, variable, fill_value=fill)
+                renderer = palette_to_stretched_renderer(palette, palette_stretch, filenames, variable, fill_value=fill, mask=mask)
 
             elif colormap is None and variable in DEFAULT_PALETTES:
                 palette, palette_stretch = DEFAULT_PALETTES[variable]
-                renderer = palette_to_stretched_renderer(palette, palette_stretch, filenames, variable, fill_value=fill)
+                renderer = palette_to_stretched_renderer(palette, palette_stretch, filenames, variable, fill_value=fill, mask=mask)
 
             else:
                 if colormap is None:
                     colormap = 'min:#000000,max:#FFFFFF'
-                renderer = colormap_to_stretched_renderer(colormap, colorspace, filenames, variable, fill_value=fill)
+                renderer = colormap_to_stretched_renderer(colormap, colorspace, filenames, variable, fill_value=fill, mask=mask)
 
         elif renderer_type == 'classified':
             if not palette:
                 raise click.BadParameter('palette required for classified (for now)',
                                          param='--palette', param_hint='--palette')
 
-            renderer = palette_to_classified_renderer(palette, filenames, variable, method='equal', fill_value=fill)  # TODO: other methods
+            renderer = palette_to_classified_renderer(palette, filenames, variable, method='equal', fill_value=fill, mask=mask)  # TODO: other methods
 
     if save_file:
 
@@ -225,26 +227,12 @@ def render_netcdf(
             ds, x_dim, y_dim, projection=Proj(src_crs) if src_crs else None
         )
 
-        mask = None
-        if mask_path is not None:
-            mask_path, mask_variable = resolve_dataset_variable(mask_path)
-            if not mask_variable:
-                mask_variable = 'mask'
-
-            with Dataset(mask_path) as mask_ds:
-                if not mask_variable in mask_ds.variables:
-                    raise click.BadParameter(
-                        'mask variable not found: {0}'.format(mask_variable),
-                         param='--mask', param_hint='--mask'
-                    )
-
-                mask = mask_ds.variables[mask_variable][:].astype('bool')
-                if not mask.shape == shape[-2:]:
-                    raise click.BadParameter(
-                        'mask variable shape does not match shape of input spatial dimensions',
-                        param='--mask', param_hint='--mask'
-                    )
-
+        if mask is not None and not mask.shape == shape[-2:]:
+            # Will likely break before this if collecting statistics
+            raise click.BadParameter(
+                'mask variable shape does not match shape of input spatial dimensions',
+                param='--mask', param_hint='--mask'
+            )
 
         flip_y = False
         reproject_kwargs = None

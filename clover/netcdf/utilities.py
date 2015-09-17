@@ -329,11 +329,12 @@ def set_ncattrs(obj, atts):
         obj.setncattr(key, atts[key])
 
 
-def collect_statistics(filenames, variables):
+def collect_statistics(filenames, variables, mask=None):
     """
     Collects basic statistics for each variable across all files
     :param filenames: files to collect statistics from
-    :param variable: variables to collect statistics of
+    :param variable: variables to collect statistics from
+    :param mask: numpy mask: True = areas to mask out.  Must be broadcastable to data variable arrays
     :return: dictionary of {"<variable>": {"min": <min> ...} }
     """
 
@@ -345,7 +346,7 @@ def collect_statistics(filenames, variables):
                 if not variable in ds.variables:
                     raise ValueError('Variable {0} is not present in dataset {1}'.format(variable, filename))
 
-                data = ds.variables[variable][:]
+                data = numpy.ma.masked_array(ds.variables[variable][:], mask=mask)
                 stats = statistics[variable]
                 stats['min'].append(data.min())
                 stats['mean'].append(data.mean())

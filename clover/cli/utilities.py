@@ -1,9 +1,13 @@
 import importlib
+
+import click
 import numpy
 from PIL.Image import ANTIALIAS
 from pyproj import Proj
+from netCDF4 import Dataset
+
 from clover.utilities.color import Color
-from clover.netcdf.utilities import collect_statistics
+from clover.netcdf.utilities import collect_statistics, resolve_dataset_variable
 from clover.render.renderers.stretched import StretchedRenderer
 from clover.render.renderers.classified import ClassifiedRenderer
 
@@ -18,12 +22,12 @@ def render_image(renderer, data, filename, scale=1, flip_y=False):
     img.save(filename)
 
 
-def colormap_to_stretched_renderer(colormap, colorspace='hsv', filenames=None, variable=None, fill_value=None):
+def colormap_to_stretched_renderer(colormap, colorspace='hsv', filenames=None, variable=None, fill_value=None, mask=None):
     statistics = None
     if 'min:' in colormap or 'max:' in colormap or 'mean' in colormap:
         if not filenames and variable:
             raise ValueError('filenames and variable are required inputs to use colormap with statistics')
-        statistics = collect_statistics(filenames, (variable,))[variable]
+        statistics = collect_statistics(filenames, (variable,), mask=mask)[variable]
 
     colors = []
     for entry in colormap.split(','):
@@ -43,7 +47,7 @@ def get_palette(palette_path):
     return getattr(importlib.import_module('palettable.' + palette_path[:index]), palette_path[index+1:])
 
 
-def palette_to_stretched_renderer(palette_path, values, filenames=None, variable=None, fill_value=None):
+def palette_to_stretched_renderer(palette_path, values, filenames=None, variable=None, fill_value=None, mask=None):
     palette = get_palette(palette_path)
 
     values = values.split(',')
@@ -54,7 +58,7 @@ def palette_to_stretched_renderer(palette_path, values, filenames=None, variable
     if 'min' in values or 'max' in values:
         if not filenames and variable:
             raise ValueError('filenames and variable are required inputs to use palette with statistics')
-        statistics = collect_statistics(filenames, (variable,))[variable]
+        statistics = collect_statistics(filenames, (variable,), mask=mask)[variable]
 
         for statistic in ('min', 'max'):
             if statistic in values:
@@ -79,13 +83,13 @@ def palette_to_stretched_renderer(palette_path, values, filenames=None, variable
     return StretchedRenderer(colors, colorspace='rgb', fill_value=fill_value)  # I think all palettable palettes are in RGB ramps
 
 
-def palette_to_classified_renderer(palette_path, filenames, variable, method='equal', fill_value=None):
+def palette_to_classified_renderer(palette_path, filenames, variable, method='equal', fill_value=None, mask=None):
     palette = get_palette(palette_path)
     num_breaks = palette.number
     colors = [Color(r, g, b) for (r, g, b) in palette.colors]
 
     if method == 'equal':
-        statistics = collect_statistics(filenames, (variable,))[variable]
+        statistics = collect_statistics(filenames, (variable,), mask=mask)[variable]
         step = (statistics['max'] - statistics['min']) / num_breaks
         breaks = numpy.linspace(statistics['min'] + step, statistics['max'], num_breaks)
 
@@ -99,3 +103,30 @@ def get_leaflet_anchors(bbox):
 
     wgs84_bbox = bbox.project(Proj(init='EPSG:4326'))
     return [[wgs84_bbox.ymin, wgs84_bbox.xmin], [wgs84_bbox.ymax, wgs84_bbox.xmax]]
+
+
+def get_mask(mask_path):
+    """
+    Returns a numpy style mask from a netCDF file.
+
+    Parameters
+    ----------
+    mask_path: string, a compound path of dataset:variable
+
+    Returns
+    -------
+    boolean mask  (True where mask will be applied)
+    """
+
+    mask_path, mask_variable = resolve_dataset_variable(mask_path)
+    if not mask_variable:
+        mask_variable = 'mask'
+
+    with Dataset(mask_path) as mask_ds:
+        if not mask_variable in mask_ds.variables:
+            raise click.BadParameter(
+                'mask variable not found: {0}'.format(mask_variable),
+                 param='--mask', param_hint='--mask'
+            )
+
+        return mask_ds.variables[mask_variable][:].astype('bool')
