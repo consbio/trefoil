@@ -5,7 +5,7 @@
 Use `--help` option on any command for more information about how to use that
 command.
 
-Nearly throughout, clover assumes that data have a 2 dimensional geographic 
+Nearly throughout, clover assumes that data have a 2 dimensional geospatial 
 component (y, x) and an optional temporal component.
 
 
@@ -105,7 +105,7 @@ Example:
 ## Create a mask from a shapefile
 
 `mask` will create a NetCDF file with a binary mask created from features in a 
-shapefile.  Currently uses a template NetCDF file to determine the geographic
+shapefile.  Currently uses a template NetCDF file to determine the geospatial
 dimensions and projection against which to rasterize the shapefile.
 
 This is typically used to mask in areas within an area of interest, and mask out
@@ -251,3 +251,105 @@ Options:
 Example:
 `> clover stats input.nc in_var1,in_var2`
 
+
+## Convert rasters to NetCDF
+
+`to_netcdf` will convert from any raster that can be read with `rasterio`
+into a NetCDF file with appropriate geospatial dimensions, and optional
+temporal dimension.  It will automatically infer data type and coordinate
+reference system, if possible.  It currently uses the Python
+[strptime](https://docs.python.org/2/library/datetime.html#strftime-and-strptime-behavior)
+format for parsing dates, but limited to 2 and 4 digit years only (`%Y` and `%y`).
+
+A common use case is to convert a series of ArcASCII files into a NetCDF
+file with geospatial and temporal dimensions.
+
+
+```
+> clover to_netcdf --help
+
+Usage: clover to_netcdf [OPTIONS] FILES OUTPUT VARIABLE
+
+  Convert rasters to NetCDF and stack them according to a dimension.
+
+  X and Y dimension names will be named according to the source projection
+  (lon, lat if geographic projection, x, y otherwise) unless specified.
+
+  Will overwrite an existing NetCDF file.
+
+Options:
+  --dtype [float32|float64|int8|int16|int32|uint8|uint16|uint32]
+                                  Data type of output variable.  Will be
+                                  inferred from input raster if not provided.
+  --src-crs TEXT                  Source coordinate reference system (limited
+                                  to EPSG codes, e.g., EPSG:4326).  Will be
+                                  read from file if not provided.
+  --x TEXT                        Name of x dimension and variable (default:
+                                  lon or x)
+  --y TEXT                        Name of y dimension and variable (default:
+                                  lat or y)
+  --z TEXT                        Name of z dimension and variable  [default:
+                                  time]
+  --netcdf3                       Output in NetCDF3 version instead of NetCDF4
+  --zip                           Use zlib compression of data and coordinate
+                                  variables
+  --packed                        Pack floating point values into an integer
+                                  (will lose precision)
+  --xy-dtype [float32|float64]    Data type of spatial coordinate variables.
+                                  [default: float32]
+  --calendar TEXT                 Calendar to use if z dimension is a date
+                                  type  [default: standard]
+```
+
+Example:
+`> clover to_netcdf inputs_*.asc my_var --dtype uint8 --src-crs EPSG:4326`
+
+Will produce a NetCDF file with longitude and latitude dimensions, and a Z
+dimension that is of the same size as the number of files that meet the filename
+pattern.  Files are stacked in the order they are listed in the directory
+(alphabetically).  The data variable `my_var` will contain the data read from
+the ArcASCII files, converted to unsigned 8 bit integers.
+
+`> clover to_netcdf inputs_%Y.asc my_var --dtype uint8 --src-crs EPSG:4326`
+
+Will produce a similar output, but will use the `%Y` expression to match 4 digit
+years and add those to a temporal dimension and coordinate variable, stored
+according to CF conventions (in days since the first year of the series, based
+on the input calendar).
+
+
+## List variables in a NetCDF file
+
+`variables` lists the data and coordinate variables within the NetCDF dataset.
+
+Example:
+`> clover variables input.nc`
+
+
+## Reproject a variable in a NetCDF file
+
+`warp` will reproject one or more data variables in a NetCDF file to a new
+coordinate reference system, using a template dataset to establish the 
+geospatial domain for output.  Files will be given the same name as the inputs
+in the output directory.
+
+
+```
+> clover warp --help
+
+Usage: clover warp [OPTIONS] FILENAME_PATTERN OUTPUT_DIRECTORY
+
+Options:
+  --variables TEXT                comma-delimited list of variables to warp.
+                                  Default: all data variables
+  --src-crs TEXT                  Source Coordinate Reference System (only
+                                  used if none found in source dataset)
+                                  [default: EPSG:4326]
+  --like PATH                     Template dataset  [required]
+  --resampling [nearest|cubic|lanczos|mode]
+                                  Resampling method for reprojection
+                                  [default: nearest]
+```
+
+Example:
+`> clover warp input_geographic.nc output --like template_mercator.nc`
