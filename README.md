@@ -3,6 +3,8 @@ Because today might be your lucky day.
 
 Geospatial operations with NetCDF files and numpy arrays.
 
+[![Build Status](https://travis-ci.org/consbio/clover.svg)](https://travis-ci.org/consbio/clover) [![Coverage Status](https://coveralls.io/repos/consbio/clover/badge.svg?branch=master&service=github)](https://coveralls.io/github/consbio/clover?branch=master)
+
 
 ## Why?
 We needed a library to consolidate a series of utility scripts and general
