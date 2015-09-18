@@ -7,6 +7,9 @@ addons:
     packages:
       - libgdal1h
       - gdal-bin
+      - libhdf5-serial-dev
+      - netcdf-bin
+      - libnetcdf-dev
 python:
   - "2.7"
   - "3.4"
