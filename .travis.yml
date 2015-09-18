@@ -10,6 +10,8 @@ addons:
       - libhdf5-serial-dev
       - netcdf-bin
       - libnetcdf-dev
+      - python-numpy
+      - python-scipy
 python:
   - "2.7"
   - "3.4"

@@ -3,4 +3,3 @@ pytest
 pytest-cov
 setuptools>=0.9.8
 wheel
-scipy

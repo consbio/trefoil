@@ -9,3 +9,4 @@ pytz
 palettable
 pyproj
 jinja2
+shapely
