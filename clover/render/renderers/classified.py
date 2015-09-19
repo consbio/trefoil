@@ -26,7 +26,6 @@ class ClassifiedRenderer(RasterRenderer):
 
         super(ClassifiedRenderer, self).__init__(colormap, fill_value, background_color)
 
-
     def get_legend(self, image_width=20, image_height=20, min_value=None, max_value=None):
         format_values = list(self.values)
         if min_value is not None:
@@ -59,22 +58,14 @@ class ClassifiedRenderer(RasterRenderer):
 
         return legend_elements
 
-
     def render_image(self, data, row_major_order=True):
-        img_size = data.shape[::-1] if row_major_order else data.shape[:2] # have to invert because PIL thinks about this backwards
         values = self._mask_fill_value(data.ravel())
+        classified = numpy.digitize(values, self.values).astype(numpy.uint8)
+        image_data = numpy.ma.masked_array(classified, mask=values.mask)
 
-        image_data = numpy.digitize(values, self.values).astype(numpy.uint8)
-        if self.background_color:
-            image_data[values.mask] = self.palette.shape[0]
-
-        img = Image.frombuffer("P", img_size, image_data, "raw", "P", 0, 1)
-        self._set_image_palette(img)
-        if self.background_color is None and values.mask.shape:
-            img = self._apply_transparency_mask_to_image(img, (values.mask == False))
-
-        return img
-
+        # have to invert dimensions because PIL thinks about this backwards
+        size = data.shape[::-1] if row_major_order else data.shape[:2]
+        return self._create_image(image_data, size)
 
     def _generate_palette(self):
         self.palette = numpy.asarray([entry[1].to_tuple() for entry in self.colormap]).astype(numpy.uint8)
