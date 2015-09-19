@@ -8,5 +8,6 @@ click
 pytz
 palettable
 pyproj
-jinja2shapely
+jinja2
+shapely
 fiona>=1.6.0
