@@ -20,6 +20,8 @@ cache:
   directories:
     - $HOME/.pip-cache/
     - $HOME/wheelhouse
+virtualenv:
+    - system_site_packages: true
 before_install:
   - curl -L https://github.com/mapbox/rasterio/releases/download/$RASTERIO_VERSION/rasterio-travis-wheels-$TRAVIS_PYTHON_VERSION.tar.gz > /tmp/wheelhouse.tar.gz
   - tar -xzvf /tmp/wheelhouse.tar.gz -C $HOME

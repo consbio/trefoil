@@ -9,5 +9,4 @@ pytz
 palettable
 pyproj
 jinja2
-shapely
 fiona>=1.6.0

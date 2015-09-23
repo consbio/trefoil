@@ -145,8 +145,20 @@ def test_utm(tmpdir):
     in_data = crs_utils.from_string(proj4)
     out_data = crs_utils.from_string(out_proj4)
 
-    assert len(out_data) == 2  # There should be 2 parameters: init, units
-    assert not set(in_data).difference(out_data)
+    # ESPG will have been converted to long form
+    assert len(out_data) == 6
+    print(out_data)
+    # assert not set(in_data).difference(out_data)
+    assert cmp(out_data,
+       {
+            u'zone': 10,
+            u'ellps': u'GRS80',
+            u'no_defs': True,
+            u'proj': u'utm',
+            u'units': u'm',
+            u'towgs84': u'0,0,0,0,0,0,0'
+       }
+   ) == 0
 
 
 def test_is_geographic(tmpdir):
@@ -162,4 +174,3 @@ def test_is_geographic(tmpdir):
     ds.createVariable('data2', 'S1', dimensions=('foo', 'bar'))
 
     assert is_geographic(ds, 'data2') == False
-
