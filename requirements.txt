@@ -1,12 +1,18 @@
-Numpy
-netCDF4>=1.1.1
 affine>=1.0
-Pillow>=2.9.0
-six
-rasterio>=0.26
 click
-pytz
-palettable
-pyproj
 jinja2
+palettable
+pytz
+six
+
+# On windows, install these from: http://www.lfd.uci.edu/~gohlke/pythonlibs/
 fiona>=1.6.0
+netCDF4>=1.1.1
+Numpy
+Pillow>=2.9.0
+pyproj
+rasterio>=0.26
+
+
+
+

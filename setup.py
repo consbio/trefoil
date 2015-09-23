@@ -14,6 +14,20 @@ setup(
     author='databasin',
     author_email='databasinadmin@consbio.org',
     description='Useful tools for spatial analysis using numpy and NetCDF',
+    install_requires=[
+        'affine>=1.0',
+        'click',
+        'jinja2',
+        'palettable',
+        'pytz',
+        'six',
+        'fiona>=1.6.0',
+        'netCDF4>=1.1.1',
+        'Numpy',
+        'Pillow>=2.9.0',
+        'pyproj',
+        'rasterio>=0.26'
+    ],
     entry_points='''
         [console_scripts]
         clover=clover.cli.main:cli

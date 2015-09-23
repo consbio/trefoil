@@ -43,7 +43,8 @@ Biology Institute.
 ## Installation
 See ```requirements.txt``` for list of dependencies.
 
-On Windows, install as many of them as possible from [Python Windows Packages](http://www.lfd.uci.edu/~gohlke/pythonlibs/).
+On Windows, install the ones that require compiling from [Python Windows Packages](http://www.lfd.uci.edu/~gohlke/pythonlibs/).
+Then install the remainder using `pip`
 
 
 ## Command line interface

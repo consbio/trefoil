@@ -92,7 +92,6 @@ def linear_regression(timesteps, values, full=False):
     # http://stackoverflow.com/questions/3054191/converting-numpy-lstsq-residual-value-to-r2
     # p-value calculation derived from scipy: https://github.com/scipy/scipy/blob/master/scipy/stats/stats.py
 
-
     assert len(values.shape) == 3
     assert values.shape[0] == timesteps.shape[0]
 
