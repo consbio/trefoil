@@ -17,7 +17,7 @@ def test_get_crs(tmpdir):
     data_var.setncattr('grid_mapping', 'crs_Lambert')
     crs_var = ds.createVariable('crs_Lambert', 'S1')
 
-    in_proj4 = '+proj=lcc +lat_1=30 +lat_2=60 +lat_0=47.5 +lon_0=-97 +x_0=3825000 +y_0=3200000'
+    in_proj4 = '+proj=lcc +units=m +lat_1=30 +lat_2=60 +lat_0=47.5 +lon_0=-97 +x_0=3825000 +y_0=3200000'
 
     # These parameters match the above proj4 string
     ncatts = dict()
@@ -32,12 +32,10 @@ def test_get_crs(tmpdir):
     out_proj4 = get_crs(ds, 'data')
     assert out_proj4 is not None
 
-    in_data = crs_utils.from_string(in_proj4)
     out_data = crs_utils.from_string(out_proj4)
 
     assert len(out_data) == 8  # There should be 8 parameters
-    assert not set(in_data).difference(out_data)
-
+    assert crs_utils.from_string(in_proj4).__cmp__(out_data) == 0
 
     # Test WGS84 lat/long
     data_var = ds.createVariable('data2', 'S1')
@@ -54,14 +52,13 @@ def test_get_crs(tmpdir):
     set_ncattrs(crs_var, ncatts)
 
     out_proj4 = get_crs(ds, 'data2')
-    print(out_proj4)
     assert out_proj4 is not None
 
-    in_data = crs_utils.from_string(in_proj4)
     out_data = crs_utils.from_string(out_proj4)
 
     assert len(out_data) == 4  # There should be 4 parameters
-    assert not set(in_data).difference(out_data)
+    # Note: pyproj adds units=m even for latlong, which is incorrect but not our problem
+    assert crs_utils.from_string(in_proj4 + ' +units=m').__cmp__(out_data) == 0
 
 
 def test_set_crs(tmpdir):
@@ -123,16 +120,15 @@ def test_symmetric_proj4(tmpdir):
     """ Test writing and reading proj4 string as attribute of variable """
 
     ds = Dataset(str(tmpdir.join('test.nc')), 'w')
-    proj4 = '+proj=stere +datum=WGS84 +lat_ts=60 +lat_0=90 +lon_0=263 +lat_1=60 +x_0=3475000 +y_0=7475000'
+    proj4 = '+proj=stere +units=m +datum=WGS84 +lat_ts=60 +lat_0=90 +lon_0=263 +lat_1=60 +x_0=3475000 +y_0=7475000'
     ds.createVariable('data', 'S1')
     set_crs(ds, 'data', Proj(proj4), set_proj4_att=True)
     out_proj4 = get_crs(ds, 'data')
 
-    in_data = crs_utils.from_string(proj4)
     out_data = crs_utils.from_string(out_proj4)
 
     assert len(out_data) == 9  # There should be 9 parameters
-    assert not set(in_data).difference(out_data)
+    assert crs_utils.from_string(proj4).__cmp__(out_data) == 0
 
 
 def test_utm(tmpdir):
@@ -142,23 +138,20 @@ def test_utm(tmpdir):
     set_crs(ds, 'data', Proj(proj4), set_proj4_att=True)
     out_proj4 = get_crs(ds, 'data')
 
-    in_data = crs_utils.from_string(proj4)
     out_data = crs_utils.from_string(out_proj4)
 
     # ESPG will have been converted to long form
     assert len(out_data) == 6
-    print(out_data)
-    # assert not set(in_data).difference(out_data)
-    assert cmp(out_data,
-       {
-            u'zone': 10,
-            u'ellps': u'GRS80',
-            u'no_defs': True,
-            u'proj': u'utm',
-            u'units': u'm',
-            u'towgs84': u'0,0,0,0,0,0,0'
-       }
-   ) == 0
+
+    expected = {
+        u'zone': 10,
+        u'ellps': u'GRS80',
+        u'no_defs': True,
+        u'proj': u'utm',
+        u'units': u'm',
+        u'towgs84': u'0,0,0,0,0,0,0'
+    }
+    assert expected.__cmp__(out_data) == 0
 
 
 def test_is_geographic(tmpdir):

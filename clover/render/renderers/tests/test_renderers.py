@@ -33,11 +33,13 @@ def test_stretched_renderer(tmpdir):
     assert len(legend) == 2
     assert legend[0].image.size == (20, 20)
 
-    assert cmp(renderer.serialize(), {
+    expected = {
         'colors': [(0.0, '#F00'), (99.0, '#00F')],
         'type': 'stretched',
         'options': {'color_space': 'hsv'}
-    }) == 0
+    }
+
+    assert expected.__cmp__(renderer.serialize()) == 0
 
 
 def test_classified_rendererer(tmpdir):
@@ -63,10 +65,11 @@ def test_classified_rendererer(tmpdir):
     for index, element in enumerate(legend):
         element.image.save(str(tmpdir.join("classified_legend_%i.png" % index)))
 
-    assert cmp(renderer.serialize(), {
+    expected = {
         'colors': [(10, '#F00'), (50, '#0F0'), (99.0, '#00F')],
         'type': 'classified'
-    }) == 0
+    }
+    assert expected.__cmp__(renderer.serialize()) == 0
 
 
 def test_uniquevalues_renderer(tmpdir):
@@ -97,7 +100,7 @@ def test_uniquevalues_renderer(tmpdir):
         element.image.save(
             str(tmpdir.join("uniquevalues_legend_%i.png" % index)))
 
-    assert cmp(renderer.serialize(), {
+    expected = {
         'colors': [
             (10, '#F00'),
             (25, '#FFF'),
@@ -107,7 +110,8 @@ def test_uniquevalues_renderer(tmpdir):
         'options': {
             'labels': ('A', 'B', 'C', 'D')
         }
-    }) == 0
+    }
+    assert expected.__cmp__(renderer.serialize()) == 0
 
 
 def test_get_renderers_by_name():
