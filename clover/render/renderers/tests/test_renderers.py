@@ -39,7 +39,7 @@ def test_stretched_renderer(tmpdir):
         'options': {'color_space': 'hsv'}
     }
 
-    assert expected.__cmp__(renderer.serialize()) == 0
+    assert renderer.serialize() == expected
 
 
 def test_classified_rendererer(tmpdir):
@@ -57,7 +57,7 @@ def test_classified_rendererer(tmpdir):
 
     img = renderer.render_image(data)
     img.save(str(tmpdir.join("classified.png")))
-    assert img.palette.palette == '\xff\x00\x00\x00\xff\x00\x00\x00\xff\x00\x00\x00'
+    assert img.palette.palette == b'\xff\x00\x00\x00\xff\x00\x00\x00\xff\x00\x00\x00'
     assert img.size == (100, 100)
 
     legend = renderer.get_legend(20, 20)
@@ -69,7 +69,7 @@ def test_classified_rendererer(tmpdir):
         'colors': [(10, '#F00'), (50, '#0F0'), (99.0, '#00F')],
         'type': 'classified'
     }
-    assert expected.__cmp__(renderer.serialize()) == 0
+    assert renderer.serialize() == expected
 
 
 def test_uniquevalues_renderer(tmpdir):
@@ -92,7 +92,7 @@ def test_uniquevalues_renderer(tmpdir):
 
     img = renderer.render_image(data)
     img.save(str(tmpdir.join("unique.png")))
-    assert img.palette.palette == '\xff\x00\x00\xff\xff\xff\x00\xff\x00\x00\x00\xff\x00\x00\x00'
+    assert img.palette.palette == b'\xff\x00\x00\xff\xff\xff\x00\xff\x00\x00\x00\xff\x00\x00\x00'
     assert img.size == (100, 100)
     legend = renderer.get_legend(20, 20)
     assert len(legend) == 4
@@ -111,7 +111,7 @@ def test_uniquevalues_renderer(tmpdir):
             'labels': ('A', 'B', 'C', 'D')
         }
     }
-    assert expected.__cmp__(renderer.serialize()) == 0
+    assert renderer.serialize() == expected
 
 
 def test_get_renderers_by_name():
@@ -125,5 +125,5 @@ def test_get_renderers_by_name():
     )
     renderer = get_renderer_by_name("classified")(colors)
     img = renderer.render_image(data)
-    assert img.palette.palette == '\xff\x00\x00\x00\xff\x00\x00\x00\xff\x00\x00\x00'
+    assert img.palette.palette == b'\xff\x00\x00\x00\xff\x00\x00\x00\xff\x00\x00\x00'
     assert img.size == (100, 100)

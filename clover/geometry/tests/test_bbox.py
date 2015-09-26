@@ -21,7 +21,7 @@ def test_bbox_local_projection():
     bbox = BBox(TEST_COORDS, TEST_COORDS_PRJ)
     out = crs.from_string(bbox.get_local_albers_projection().srs)
     expected = crs.from_string("+lon_0=-124.5625 +ellps=WGS84 +datum=WGS84 +y_0=0 +no_defs=True +proj=aea +x_0=0 +units=m +lat_2=48.9375 +lat_1=48.6875 +lat_0=0 ")
-    assert expected.__cmp__(out) == 0
+    assert expected == out
 
 
 def test_projection():

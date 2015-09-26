@@ -35,7 +35,7 @@ def test_get_crs(tmpdir):
     out_data = crs_utils.from_string(out_proj4)
 
     assert len(out_data) == 8  # There should be 8 parameters
-    assert crs_utils.from_string(in_proj4).__cmp__(out_data) == 0
+    assert crs_utils.from_string(in_proj4) == out_data
 
     # Test WGS84 lat/long
     data_var = ds.createVariable('data2', 'S1')
@@ -58,7 +58,7 @@ def test_get_crs(tmpdir):
 
     assert len(out_data) == 4  # There should be 4 parameters
     # Note: pyproj adds units=m even for latlong, which is incorrect but not our problem
-    assert crs_utils.from_string(in_proj4 + ' +units=m').__cmp__(out_data) == 0
+    assert crs_utils.from_string(in_proj4 + ' +units=m') == out_data
 
 
 def test_set_crs(tmpdir):
@@ -128,7 +128,7 @@ def test_symmetric_proj4(tmpdir):
     out_data = crs_utils.from_string(out_proj4)
 
     assert len(out_data) == 9  # There should be 9 parameters
-    assert crs_utils.from_string(proj4).__cmp__(out_data) == 0
+    assert crs_utils.from_string(proj4) == out_data
 
 
 def test_utm(tmpdir):
@@ -151,7 +151,7 @@ def test_utm(tmpdir):
         u'units': u'm',
         u'towgs84': u'0,0,0,0,0,0,0'
     }
-    assert expected.__cmp__(out_data) == 0
+    assert expected == out_data
 
 
 def test_is_geographic(tmpdir):
