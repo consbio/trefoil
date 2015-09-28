@@ -67,6 +67,7 @@ DEFAULT_PALETTES = {
 @click.option('--lh', default=150, help='Height of the legend in pixels [default: 150]')
 @click.option('--legend_breaks', default=None, type=click.INT, help='Number of breaks to show on legend for stretched renderer')
 @click.option('--legend_ticks', default=None, type=click.STRING, help='Legend tick values for stretched renderer')
+@click.option('--legend_precision', default=2, type=click.INT, help='Number of decimal places of precision for legend labels', show_default=True)
 # Projection related options
 @click.option('--src-crs', '--src_crs', default=None, type=click.STRING, help='Source coordinate reference system (limited to EPSG codes, e.g., EPSG:4326).  Will be read from file if not provided.')
 @click.option('--dst-crs', '--dst_crs', default=None, type=click.STRING, help='Destination coordinate reference system')
@@ -93,6 +94,7 @@ def render_netcdf(
         lh,
         legend_breaks,
         legend_ticks,
+        legend_precision,
         src_crs,
         dst_crs,
         res,
@@ -191,7 +193,7 @@ def render_netcdf(
         if legend_ticks is not None and not legend_breaks:
             legend_ticks = [float(v) for v in legend_ticks.split(',')]
 
-        legend = renderer.get_legend(image_height=lh, breaks=legend_breaks, ticks=legend_ticks, max_precision=2)[0].to_image()
+        legend = renderer.get_legend(image_height=lh, breaks=legend_breaks, ticks=legend_ticks, max_precision=legend_precision)[0].to_image()
 
     elif renderer_type == 'classified':
         legend = composite_elements(renderer.get_legend())

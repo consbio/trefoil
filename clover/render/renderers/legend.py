@@ -52,7 +52,7 @@ class LegendElement(object):
             label_y = int(round(float(1 - self.ticks[index]) * height - half_text_height)) + text_height
             line_x = self.image.size[0] + 2
             line_y = label_y + half_text_height
-            canvas.line((line_x, line_y, line_x + label_x_padding - 6, line_y), fill=(0,0,0,255), width=1)
+            canvas.line((line_x, line_y, line_x + label_x_padding - 6, line_y), fill=(150,150,150,255), width=1)
             canvas.text((label_x, label_y), label, font=font, fill=(0,0,0,255))
 
         return img
