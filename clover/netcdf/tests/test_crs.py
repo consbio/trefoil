@@ -107,10 +107,23 @@ def test_set_crs_epsg(tmpdir):
 
     ds = Dataset(str(tmpdir.join('test.nc')), 'w')
     data_var = ds.createVariable('data', 'S1')
-    set_crs(ds, 'data', Proj(init='EPSG:4326'))
-    crs_var = ds.variables[get_ncattrs(data_var)['grid_mapping']]
+    set_crs(ds, 'data', Proj(init='EPSG:4326'), set_proj4_att=True)
+    data_atts = get_ncattrs(data_var)
+    crs_var = ds.variables[data_atts['grid_mapping']]
     ncatts = get_ncattrs(crs_var)
 
+    assert data_atts['proj4'] == '+proj=latlong +datum=WGS84 +no_defs'
+    assert ncatts['grid_mapping_name'] == 'latitude_longitude'
+    assert ncatts['semi_major_axis'] == 6378137.0
+    assert ncatts['inverse_flattening'] == 298.257223563
+
+    data_var = ds.createVariable('data2', 'S1')
+    set_crs(ds, 'data2', Proj(init='EPSG:4269'), set_proj4_att=True)
+    data_atts = get_ncattrs(data_var)
+    crs_var = ds.variables[data_atts['grid_mapping']]
+    ncatts = get_ncattrs(crs_var)
+
+    assert data_atts['proj4'] == '+proj=latlong +datum=NAD83 +no_defs'
     assert ncatts['grid_mapping_name'] == 'latitude_longitude'
     assert ncatts['semi_major_axis'] == 6378137.0
     assert ncatts['inverse_flattening'] == 298.257223563
