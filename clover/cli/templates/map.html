@@ -84,9 +84,11 @@
         var layers = {{ layers }};
 
         var ids = d3.keys(layers);
-//        ids.sort(d3.ascending);
         ids.sort(function(a, b){
-            return d3.ascending(parseInt(number_regex.exec(a)[0]), parseInt(number_regex.exec(b)[0]));
+            if (number_regex.test(a) && number_regex.test(b)) {
+                return d3.ascending(parseInt(number_regex.exec(a)[0]), parseInt(number_regex.exec(b)[0]));
+            }
+            return d3.ascending(a, b);
         });
         var selector = d3.select('#Selector');
 

@@ -6,7 +6,7 @@ from rasterio import crs
 from rasterio.warp import reproject, RESAMPLING
 
 from clover.netcdf.crs import get_crs
-from clover.netcdf.utilities import copy_variable_dimensions, copy_variable, copy_dimension
+from clover.netcdf.utilities import copy_variable, copy_dimension, get_fill_value
 from clover.netcdf.variable import SpatialCoordinateVariables
 
 
@@ -20,7 +20,10 @@ def warp_array(
     resampling=RESAMPLING.nearest):
 
     """
-    Warp a 2D array using rasterio.
+    Warp a 2D array using rasterio, always returning a masked array.
+
+    A fill_value will be chosen from the array's data type if the input is not a masked array (beware conflicts with
+    valid values!)
 
     All nodata values are filled in prior to warping, and masked back out later if necessary.
 
@@ -30,11 +33,16 @@ def warp_array(
     """
 
     with rasterio.drivers():
+        orig_dtype = arr.dtype
+        if arr.dtype == numpy.int8:
+            # Have to upcast for rasterio
+            arr = arr.astype('int16')
+
         out = numpy.empty(shape=dst_shape, dtype=arr.dtype)
 
-        fill = None
+        fill = get_fill_value(arr.dtype)
         if hasattr(arr, 'fill_value'):
-            fill=arr.fill_value
+            fill = arr.fill_value
             arr = numpy.ma.filled(arr, arr.fill_value)
 
         reproject(
@@ -49,8 +57,10 @@ def warp_array(
             dst_nodata=fill
         )
 
-        if fill:
-            out = numpy.ma.masked_array(out, mask=out == fill)
+        if out.dtype != orig_dtype:
+            out = out.astype(orig_dtype)
+
+        out = numpy.ma.masked_array(out, mask=out == fill)
 
         return out
 

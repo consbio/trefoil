@@ -100,12 +100,12 @@ class StretchedRenderer(RasterRenderer):
     # TODO: handle cropping of stretched values properly (truncate above and below and set to background value?)
     def render_image(self, data, row_major_order=True):
         num_colors = self.palette.shape[0]
-        factor = float(num_colors) / float(self.max_value - self.min_value)
+        factor = float(num_colors - 1) / float(self.max_value - self.min_value)
         values = self._mask_fill_value(data.ravel())
 
         # derive palette index, and clip to [0, num_colors - 1]
         stretched = ((values - self.min_value) * factor).astype(numpy.int)
-        image_data = stretched.clip(0, num_colors-1).astype(numpy.uint8)
+        image_data = stretched.clip(0, num_colors - 1).astype(numpy.uint8)
 
         # have to invert dimensions because PIL thinks about this backwards
         size = data.shape[::-1] if row_major_order else data.shape[:2]
