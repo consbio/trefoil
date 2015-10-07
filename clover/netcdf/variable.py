@@ -32,7 +32,8 @@ class CoordinateVariable(object):
         if isinstance(input, Variable):
             self.values = input[:]
             for attr in input.ncattrs():
-                self._ncattrs[attr] = input.getncattr(attr)
+                if not attr == '_FillValue':
+                    self._ncattrs[attr] = input.getncattr(attr)
         else:
             self.values = input[:].copy()
 
