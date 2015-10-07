@@ -229,7 +229,10 @@ def interpolate_linear(colors, values, num_colors, colorspace="hsv"):
 
     min_value = min(values)
     value_range = max(values) - min_value
-    factor = float(num_colors-1) / value_range
+    if value_range == 0:
+        factor = 1.0
+    else:
+        factor = float(num_colors-1) / value_range
 
     target_x = numpy.arange(0, num_colors)
     x = []
