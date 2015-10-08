@@ -18,6 +18,9 @@
         h4 {
             margin: 0;
         }
+        select {
+            font-size: 1.2em;
+        }
         #Map {
             position: absolute;
             top:36px;
@@ -55,8 +58,8 @@
     </div>
     <div id="Map"></div>
     <div id="Legend" class="box">
-        <h4>{{ variable }}</h4>
-        <img src="{{ variable }}_legend.png" />
+        <h4></h4>
+        <img src="" />
     </div>
     <script>
 
@@ -76,30 +79,48 @@
         var map = L.map('Map', {layers: [basemap, reference]});
 
         var layers = {{ layers }};
+        var rawVariables = d3.set({{ raw_variables }});
+        var tree = {{ tree }};
 
-        var ids = d3.keys(layers);
-//        ids.sort(function(a, b){
-//            return d3.ascending(parseInt(number_regex.exec(a)[0]), parseInt(number_regex.exec(b)[0]));
-//        });
-        var selector = d3.select('#Selector');
-
-        var layer = new L.imageOverlay(layers[ids[0]], {{ bounds }}).addTo(map);
+        var layer = new L.imageOverlay('', {{ bounds }});
+        setVariable(tree[0][0]);
+        layer.addTo(map);
         map.fitBounds(layer);
 
+        var selector = d3.select('#Selector');
         selector.selectAll('option')
-            .data(ids).enter()
+            .data(tree).enter()
             .append('option')
-            .attr('value', function(d){return d})
-            .html(function(d){return d});
+            .attr('value', function(d){return d[0]})
+            .html(function(d){
+                    prefix = '';
+                    for (var i=0; i<d[1]; i++){
+                        prefix += '--'
+                    }
+                    return ((prefix)? '|' + prefix + ' ': '') + d[0];
+                });
 
-        selector.on('change', function(){
-            layer.setUrl(layers[d3.select('#Selector').property('value')]);
+        selector.on('change', function() {
+            setVariable(d3.select('#Selector').property('value'));
         });
 
         d3.select('#Transparency').on('change', function(){
             layer.setOpacity((100 - parseInt(d3.select('#Transparency').property('value'))) / 100.0);
         });
 
+        function setVariable(layerKey){
+            layer.setUrl(layers[layerKey]);
+
+            var legendNode = d3.select('#Legend');
+            var legendImage = legendNode.select('img');
+            legendNode.select('h4').text(layerKey);
+            if (rawVariables.has(layerKey)){
+                legendImage.attr('src', layerKey + '_legend.png');
+            }
+            else {
+                legendImage.attr('src', 'fuzzy_legend.png');
+            }
+        }
     </script>
 </body>
 </html>

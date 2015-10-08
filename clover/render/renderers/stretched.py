@@ -71,9 +71,13 @@ class StretchedRenderer(RasterRenderer):
             tick_positions = []
             labels = []
 
-            for value in tick_values:
-                tick_positions.append((value - self.min_value) / value_range)
-                labels.append(formatter.format(value))
+            if abs(value_range) > 0:
+                for value in tick_values:
+                    tick_positions.append((value - self.min_value) / value_range)
+                    labels.append(formatter.format(value))
+            else:
+                tick_positions = [0, 1.0]
+                labels = [formatter.format(tick_values[0])] * 2
 
             if discrete_images:
                 colors = numpy.asarray([entry[1].to_tuple() for entry in self.colormap]).astype(numpy.uint8)

@@ -31,26 +31,22 @@ from clover.cli.utilities import (
 
 # Common defaults for usability wins
 DEFAULT_PALETTES = {
-    'fuzzy': ('colorbrewer.diverging.PuOr_5', '-1,1'),
-    'raw': ('colorbrewer.sequential.YlOrRd_5', 'min,max'),
-    # 'tmin': ('colorbrewer.sequential.YlOrRd_5', 'min,max'),
-    # 'tmax': ('colorbrewer.sequential.YlOrRd_5', 'min,max'),
-    # 'ppt': ('colorbrewer.diverging.RdYlGn_5', 'min,max'),
-    # 'pet': ('colorbrewer.diverging.RdYlGn_5', 'max,min')
+    'fuzzy': 'colorbrewer.diverging.Spectral_5',
+    'raw': 'colorbrewer.sequential.YlOrRd_5'
 }
-
 
 
 @cli.command(short_help="Render a NetCDF EEMS model to a web map")
 @click.argument('EEMS_FILE', type=click.Path(exists=True))
 @click.argument('output_directory', type=click.Path())  # TODO: temp file instead?
-# @click.option('--lh', default=150, help='Height of the legend in pixels [default: 150]')
+@click.option('--scale', default=1.0, help='Scale factor for data pixel to screen pixel size')
 # Projection related options
 @click.option('--src-crs', '--src_crs', default=None, type=click.STRING, help='Source coordinate reference system (limited to EPSG codes, e.g., EPSG:4326).  Will be read from file if not provided.')
 @click.option('--resampling', default='nearest', type=click.Choice(('nearest', 'cubic', 'lanczos', 'mode')), help='Resampling method for reprojection (default: nearest')
 def map_eems(
         eems_file,
         output_directory,
+        scale,
         src_crs,
         resampling):
     """
@@ -61,8 +57,6 @@ def map_eems(
 
 
     model = EEMSProgram(eems_file)
-
-    tree = model.GetCmdTree()
 
     # For each data producing command, store the netcdf file that contains it
     file_vars = dict()
@@ -95,39 +89,9 @@ def map_eems(
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
 
-    # TODO: set renderer based on variable type, and create a legend for each
-
-    #     if renderer_type == 'stretched':
-    #         if palette is not None:
-    #             renderer = palette_to_stretched_renderer(palette, palette_stretch, filenames, variable, fill_value=fill, mask=mask)
-    #
-    #         elif colormap is None and variable in DEFAULT_PALETTES:
-    #             palette, palette_stretch = DEFAULT_PALETTES[variable]
-    #             renderer = palette_to_stretched_renderer(palette, palette_stretch, filenames, variable, fill_value=fill, mask=mask)
-    #
-    #         else:
-    #             if colormap is None:
-    #                 colormap = 'min:#000000,max:#FFFFFF'
-    #             renderer = colormap_to_stretched_renderer(colormap, colorspace, filenames, variable, fill_value=fill, mask=mask)
-    #
-    #     elif renderer_type == 'classified':
-    #         if not palette:
-    #             raise click.BadParameter('palette required for classified (for now)',
-    #                                      param='--palette', param_hint='--palette')
-    #
-    #         renderer = palette_to_classified_renderer(palette, filenames, variable, method='equal', fill_value=fill, mask=mask)  # TODO: other methods
-    #
-    # if renderer_type == 'stretched':
-    #     if legend_ticks is not None and not legend_breaks:
-    #         legend_ticks = [float(v) for v in legend_ticks.split(',')]
-    #
-    #     legend = renderer.get_legend(image_height=lh, breaks=legend_breaks, ticks=legend_ticks, max_precision=legend_precision)[0].to_image()
-    #
-    # elif renderer_type == 'classified':
-    #     legend = composite_elements(renderer.get_legend())
-    #
-    # legend.save(os.path.join(output_directory, '{0}_legend.png'.format(variable)))
-    #
+    # Since fuzzy renderer is hardcoded, we can output it now
+    fuzzy_renderer = palette_to_stretched_renderer(DEFAULT_PALETTES['fuzzy'], '1,-1')
+    fuzzy_renderer.get_legend(image_height=150)[0].to_image().save(os.path.join(output_directory, 'fuzzy_legend.png'))
 
     template_filename = filenames[0]
     template_var = file_vars[template_filename][0]
@@ -199,7 +163,7 @@ def map_eems(
                 click.echo('Processing variable {0}'.format(variable))
 
                 if not variable in ds.variables:
-                    continue
+                    continue  # FIXME!
                     # raise click.ClickException('variable {0} was not found in file: {1}'.format(variable, filename))
 
                 var_obj = ds.variables[variable]
@@ -210,15 +174,19 @@ def map_eems(
                 # if mask is not None:
                 #     data = numpy.ma.masked_array(data, mask=mask)
 
-                palette_key = 'fuzzy'
+
                 if variable in raw_variables:
-                    palette_key = 'raw'
-                palette, palette_stretch = DEFAULT_PALETTES[palette_key]
-                renderer = palette_to_stretched_renderer(palette, palette_stretch, [filename], variable)
+                    palette = DEFAULT_PALETTES['raw']
+                    palette_stretch = '{0},{1}'.format(data.min(), data.max())
+
+                    renderer = palette_to_stretched_renderer(palette, palette_stretch)
+                    renderer.get_legend(image_height=150, max_precision=2)[0].to_image().save(os.path.join(output_directory, '{0}_legend.png'.format(variable)))
+                else:
+                    renderer = fuzzy_renderer
 
                 image_filename = os.path.join(output_directory, '{0}.png'.format(variable))
                 data = warp_array(data, **reproject_kwargs)
-                render_image(renderer, data, image_filename)
+                render_image(renderer, data, image_filename, scale)
 
                 local_filename = os.path.split(image_filename)[1]
                 layers[variable] = local_filename
@@ -231,7 +199,8 @@ def map_eems(
             template.render(
                 layers=json.dumps(layers),
                 bounds=str(leaflet_anchors),
-                variable=variable
+                tree=[[cmd, depth] for (cmd, depth) in model.GetCmdTree()],
+                raw_variables=list(raw_variables)
             )
         )
 
