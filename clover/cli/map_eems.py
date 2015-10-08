@@ -1,8 +1,7 @@
 import os
-import glob
+import tempfile
 import json
 import webbrowser
-import numpy
 from netCDF4 import Dataset
 import click
 from pyproj import Proj
@@ -10,17 +9,12 @@ from rasterio import crs
 from rasterio.warp import RESAMPLING, calculate_default_transform
 from jinja2 import Environment, PackageLoader
 
-from clover.render.renderers.utilities import renderer_from_dict
-from clover.render.renderers.legend import composite_elements
 from clover.netcdf.variable import SpatialCoordinateVariables
 from clover.geometry.bbox import BBox
 from clover.netcdf.warp import warp_array
 from clover.netcdf.crs import get_crs, is_geographic
 from clover.cli import cli
-from clover.cli.utilities import (
-    render_image, collect_statistics, colormap_to_stretched_renderer,
-    palette_to_stretched_renderer, palette_to_classified_renderer,
-    get_leaflet_anchors, get_mask)
+from clover.cli.utilities import render_image, palette_to_stretched_renderer, get_leaflet_anchors
 
 
 # Requires EEMS installed from: https://github.com/MikeTheReader/EEMS
@@ -32,20 +26,20 @@ from clover.cli.utilities import (
 # Common defaults for usability wins
 DEFAULT_PALETTES = {
     'fuzzy': 'colorbrewer.diverging.Spectral_5',
-    'raw': 'colorbrewer.sequential.YlOrRd_5'
+    'raw': 'colorbrewer.sequential.Greys_5'
 }
 
 
 @cli.command(short_help="Render a NetCDF EEMS model to a web map")
 @click.argument('EEMS_FILE', type=click.Path(exists=True))
-@click.argument('output_directory', type=click.Path())  # TODO: temp file instead?
+# @click.argument('output_directory', type=click.Path())  # TODO: temp file instead?
 @click.option('--scale', default=1.0, help='Scale factor for data pixel to screen pixel size')
 # Projection related options
 @click.option('--src-crs', '--src_crs', default=None, type=click.STRING, help='Source coordinate reference system (limited to EPSG codes, e.g., EPSG:4326).  Will be read from file if not provided.')
 @click.option('--resampling', default='nearest', type=click.Choice(('nearest', 'cubic', 'lanczos', 'mode')), help='Resampling method for reprojection (default: nearest')
 def map_eems(
         eems_file,
-        output_directory,
+        # output_directory,
         scale,
         src_crs,
         resampling):
@@ -86,8 +80,10 @@ def map_eems(
 
     dst_crs = 'EPSG:3857'
 
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory)
+    output_directory = tempfile.mkdtemp()
+    click.echo('Using temp directory: {0}'.format(output_directory))
+    # if not os.path.exists(output_directory):
+    #     os.makedirs(output_directory)
 
     # Since fuzzy renderer is hardcoded, we can output it now
     fuzzy_renderer = palette_to_stretched_renderer(DEFAULT_PALETTES['fuzzy'], '1,-1')
@@ -157,14 +153,11 @@ def map_eems(
         with Dataset(filename) as ds:
             click.echo('Processing dataset {0}'.format(filename))
 
-            filename_root = os.path.split(filename)[1].replace('.nc', '')
-
             for variable in file_vars[filename]:
                 click.echo('Processing variable {0}'.format(variable))
 
                 if not variable in ds.variables:
-                    continue  # FIXME!
-                    # raise click.ClickException('variable {0} was not found in file: {1}'.format(variable, filename))
+                    raise click.ClickException('variable {0} was not found in file: {1}'.format(variable, filename))
 
                 var_obj = ds.variables[variable]
                 if not var_obj.dimensions == dimensions:
@@ -177,7 +170,7 @@ def map_eems(
 
                 if variable in raw_variables:
                     palette = DEFAULT_PALETTES['raw']
-                    palette_stretch = '{0},{1}'.format(data.min(), data.max())
+                    palette_stretch = '{0},{1}'.format(data.max(), data.min())
 
                     renderer = palette_to_stretched_renderer(palette, palette_stretch)
                     renderer.get_legend(image_height=150, max_precision=2)[0].to_image().save(os.path.join(output_directory, '{0}_legend.png'.format(variable)))
