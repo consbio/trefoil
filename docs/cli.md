@@ -221,6 +221,34 @@ red stretched renderer (in HSV color space, by default), stretched from the
 minimum to the maximum values across all datasets.
 
 
+## Render a NetCDF-based EEMS model to a map
+
+`map_eems` creates a Leaflet-based web map of a NetCDF-based EEMS model.  
+It uses blue-yellow-red color ramp for data variables in fuzzy space, and a
+black to white color ramp for input data variables.
+
+Note: the same resampling method applies to all variables, and may not be
+appropriate for all variables.  Use `nearest` if any variables are categorical.
+
+
+```
+> clover map_eems --help
+Usage: clover map_eems [OPTIONS] EEMS_FILE
+
+  Render a NetCDF EEMS model to a web map.
+
+Options:
+  --scale FLOAT                   Scale factor for data pixel to screen pixel
+                                  size
+  --src-crs, --src_crs TEXT       Source coordinate reference system (limited
+                                  to EPSG codes, e.g., EPSG:4326).  Will be
+                                  read from file if not provided.
+  --resampling [nearest|cubic|lanczos|mode]
+                                  Resampling method for reprojection (default:
+                                  nearest
+```
+
+
 ## Render a GeoTIFF
 
 *likely to go away or be refactored in a major way*
