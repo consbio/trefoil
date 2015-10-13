@@ -196,6 +196,9 @@ Options:
   --legend_breaks INTEGER         Number of breaks to show on legend for
                                   stretched renderer
   --legend_ticks TEXT             Legend tick values for stretched renderer
+  --legend_precision INTEGER      Number of decimal places of precision for
+                                  legend labels  [default: 2]
+  --format [png|jpg|webp]         [default: png]
   --src-crs, --src_crs TEXT       Source coordinate reference system (limited
                                   to EPSG codes, e.g., EPSG:4326).  Will be
                                   read from file if not provided.
@@ -240,6 +243,7 @@ Usage: clover map_eems [OPTIONS] EEMS_FILE
 Options:
   --scale FLOAT                   Scale factor for data pixel to screen pixel
                                   size
+  --format [png|jpg|webp]         [default: png]
   --src-crs, --src_crs TEXT       Source coordinate reference system (limited
                                   to EPSG codes, e.g., EPSG:4326).  Will be
                                   read from file if not provided.

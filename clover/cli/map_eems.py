@@ -34,6 +34,7 @@ DEFAULT_PALETTES = {
 @click.argument('EEMS_FILE', type=click.Path(exists=True))
 # @click.argument('output_directory', type=click.Path())  # TODO: temp file instead?
 @click.option('--scale', default=1.0, help='Scale factor for data pixel to screen pixel size')
+@click.option('--format', default='png', type=click.Choice(['png', 'jpg', 'webp']), show_default=True)
 # Projection related options
 @click.option('--src-crs', '--src_crs', default=None, type=click.STRING, help='Source coordinate reference system (limited to EPSG codes, e.g., EPSG:4326).  Will be read from file if not provided.')
 @click.option('--resampling', default='nearest', type=click.Choice(('nearest', 'cubic', 'lanczos', 'mode')), help='Resampling method for reprojection (default: nearest')
@@ -41,6 +42,7 @@ def map_eems(
         eems_file,
         # output_directory,
         scale,
+        format,
         src_crs,
         resampling):
     """
@@ -177,9 +179,9 @@ def map_eems(
                 else:
                     renderer = fuzzy_renderer
 
-                image_filename = os.path.join(output_directory, '{0}.png'.format(variable))
+                image_filename = os.path.join(output_directory, '{0}.{1}'.format(variable, format))
                 data = warp_array(data, **reproject_kwargs)
-                render_image(renderer, data, image_filename, scale)
+                render_image(renderer, data, image_filename, scale=scale, format=format)
 
                 local_filename = os.path.split(image_filename)[1]
                 layers[variable] = local_filename

@@ -13,7 +13,7 @@ from clover.render.renderers.stretched import StretchedRenderer
 from clover.render.renderers.classified import ClassifiedRenderer
 
 
-def render_image(renderer, data, filename, scale=1, flip_y=False):
+def render_image(renderer, data, filename, scale=1, flip_y=False, format='png'):
     if flip_y:
         data = data[::-1]
 
@@ -22,8 +22,14 @@ def render_image(renderer, data, filename, scale=1, flip_y=False):
         img = img.resize((numpy.array(data.shape[::-1]) * scale).astype(numpy.uint), ANTIALIAS)
 
     kwargs = {}
-    if os.path.splitext(filename)[1].lower() == '.png':
+    if format == 'png':
         kwargs['optimize'] = True
+    elif format == 'jpg':
+        img = img.convert('RGB')
+        kwargs['progressive'] = True
+    elif format == 'webp':
+        img = img.convert('RGBA')
+        kwargs['lossless'] = True
 
     img.save(filename, **kwargs)
 

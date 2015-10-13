@@ -68,6 +68,7 @@ DEFAULT_PALETTES = {
 @click.option('--legend_breaks', default=None, type=click.INT, help='Number of breaks to show on legend for stretched renderer')
 @click.option('--legend_ticks', default=None, type=click.STRING, help='Legend tick values for stretched renderer')
 @click.option('--legend_precision', default=2, type=click.INT, help='Number of decimal places of precision for legend labels', show_default=True)
+@click.option('--format', default='png', type=click.Choice(['png', 'jpg', 'webp']), show_default=True)
 # Projection related options
 @click.option('--src-crs', '--src_crs', default=None, type=click.STRING, help='Source coordinate reference system (limited to EPSG codes, e.g., EPSG:4326).  Will be read from file if not provided.')
 @click.option('--dst-crs', '--dst_crs', default=None, type=click.STRING, help='Destination coordinate reference system')
@@ -95,6 +96,7 @@ def render_netcdf(
         legend_breaks,
         legend_ticks,
         legend_precision,
+        format,
         src_crs,
         dst_crs,
         res,
@@ -301,27 +303,27 @@ def render_netcdf(
                 data = var_obj[:]
                 if mask is not None:
                     data = numpy.ma.masked_array(data, mask=mask)
-                image_filename = os.path.join(output_directory, '{0}_{1}.png'.format(filename_root, variable))
+                image_filename = os.path.join(output_directory, '{0}_{1}.{2}'.format(filename_root, variable, format))
                 if reproject_kwargs:
                     data = warp_array(data, **reproject_kwargs)
-                render_image(renderer, data, image_filename, scale, flip_y=flip_y)
+                render_image(renderer, data, image_filename, scale, flip_y=flip_y, format=format)
 
                 local_filename = os.path.split(image_filename)[1]
-                layers[local_filename.replace('.png', '')] = local_filename
+                layers[os.path.splitext(local_filename)[0]] = local_filename
 
             elif num_dimensions == 3:
                 for index in range(shape[0]):
                     id = ds.variables[id_variable][index] if id_variable is not None else index
-                    image_filename = os.path.join(output_directory, '{0}_{1}__{2}.png'.format(filename_root, variable, id))
+                    image_filename = os.path.join(output_directory, '{0}_{1}__{2}.{3}'.format(filename_root, variable, id, format))
                     data = var_obj[index]
                     if mask is not None:
                         data = numpy.ma.masked_array(data, mask=mask)
                     if reproject_kwargs:
                         data = warp_array(data, **reproject_kwargs)
-                    render_image(renderer, data, image_filename, scale, flip_y=flip_y)
+                    render_image(renderer, data, image_filename, scale, flip_y=flip_y, format=format)
 
                     local_filename = os.path.split(image_filename)[1]
-                    layers[local_filename.replace('.png', '')] = local_filename
+                    layers[os.path.splitext(local_filename)[0]] = local_filename
 
 
 
@@ -356,13 +358,13 @@ def render_netcdf(
             #                 id_parts.append(str(dim_index))
             #
             #         combined_id = '_'.join(id_parts)
-            #         image_filename = os.path.join(output_directory, '{0}__{1}.png'.format(filename_root, combined_id))
+            #         image_filename = os.path.join(output_directory, '{0}__{1}.{2}'.format(filename_root, combined_id, format))
             #         if reproject_kwargs:
             #             data = warp_array(data, **reproject_kwargs)  # NOTE: lack of index will break this
-            #         render_image(renderer, data[combined_index], image_filename, scale, flip_y=flip_y)
+            #         render_image(renderer, data[combined_index], image_filename, scale, flip_y=flip_y, format=format)
             #
             #         local_filename = os.path.split(image_filename)[1]
-            #         layers[local_filename.replace('.png', '')] = local_filename
+            #         layers[os.path.splitext(local_filename)[0]] = local_filename
 
 
     if interactive_map:
