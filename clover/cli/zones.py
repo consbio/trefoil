@@ -22,7 +22,7 @@ from clover.netcdf.utilities import data_variables, get_fill_value
 @click.option('--variable', type=click.STRING, default='zones', help='Name of output zones variable', show_default=True)
 @click.option('--attribute', type=click.STRING, default=None, help='Name of attribute in shapefile to use for zones (default: feature ID)')
 @click.option('--like', help='Template NetCDF dataset', type=click.Path(exists=True), required=True)
-# @click.option('--netcdf3', is_flag=True, default=False, help='Output in NetCDF3 version instead of NetCDF4')
+@click.option('--netcdf3', is_flag=True, default=False, help='Output in NetCDF3 version instead of NetCDF4')
 # @click.option('--all-touched', is_flag=True, default=False, help='Turn all touched pixels into mask (otherwise only pixels with centroid in features)')
 @click.option('--zip', is_flag=True, default=False, help='Use zlib compression of data and coordinate variables')
 def zones(
@@ -31,7 +31,7 @@ def zones(
     variable,
     attribute,
     like,
-    # netcdf3,
+    netcdf3,
     # all_touched,
     zip):
 
@@ -86,7 +86,13 @@ def zones(
         transform_required = not is_same_crs(shp.crs, template_crs)
         geometries = []
         values = []
-        for f in shp.filter(bbox=coords.bbox.as_list()):  # TODO: apply this to mask
+
+        # Project bbox for filtering
+        bbox = coords.bbox
+        if transform_required:
+            bbox = bbox.project(Proj(**shp.crs), edge_points=21)
+
+        for f in shp.filter(bbox=bbox.as_list()):  # TODO: apply this to mask
             value = f['properties'].get(attribute) if attribute else int(f['id'])
             if value is not None:
                 geom = f['geometry']
@@ -97,6 +103,7 @@ def zones(
                 geometries.append((geom, value))
             # Otherwise, these will not be rasterized
 
+        click.echo('Rasterizing {0} features into zones'.format(len(geometries)))
 
         # TODO: data type range checks!
 
@@ -111,17 +118,20 @@ def zones(
         )
         # TODO: convert fill value to mask!
 
+        zones = numpy.ma.masked_array(zones, mask=(zones == fill_value))
 
-    # format = 'NETCDF3_CLASSIC' if netcdf3 else 'NETCDF4'
-    format = 'NETCDF4'
+    format = 'NETCDF3_CLASSIC' if netcdf3 else 'NETCDF4'
     out_dtype = dtype
-    # if netcdf3 and dtype == numpy.uint8:
-    #     out_dtype = 'int16'  # TODO: confirm this is working properly
+    if netcdf3:
+        if dtype == numpy.uint16:
+            out_dtype = numpy.dtype('int32')
+        elif dtype == numpy.uint8:
+          out_dtype = numpy.dtype('int16')
 
     with Dataset(output, 'w', format=format) as out:
         coords.add_to_dataset(out, template_x_name, template_y_name)
         out_var = out.createVariable(variable, out_dtype,
                                      dimensions=spatial_dimensions,
                                      zlib=zip,
-                                     fill_value=fill_value)
+                                     fill_value=get_fill_value(out_dtype))
         out_var[:] = zones
