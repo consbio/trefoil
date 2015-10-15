@@ -22,8 +22,8 @@ from clover.netcdf.utilities import data_variables, get_fill_value
 @click.option('--like', help='Template NetCDF dataset', type=click.Path(exists=True), required=True)
 @click.option('--netcdf3', is_flag=True, default=False, help='Output in NetCDF3 version instead of NetCDF4')
 @click.option('--all-touched', is_flag=True, default=False, help='Turn all touched pixels into mask (otherwise only pixels with centroid in features)')
+@click.option('--invert', is_flag=True, default=False, help='Create inverted mask (opposite of numpy mask, True where there are features)')
 @click.option('--zip', is_flag=True, default=False, help='Use zlib compression of data and coordinate variables')
-# TODO: invert option?
 # TODO: add option to create a mask for each feature
 def mask(
     input,
@@ -32,6 +32,7 @@ def mask(
     like,
     netcdf3,
     all_touched,
+    invert,
     zip):
 
     """
@@ -67,10 +68,29 @@ def mask(
 
 
     with fiona.open(input, 'r') as shp:
-        geometries = [f['geometry'] for f in shp]  # TODO: filter out ones that our outside bbox of dataset projected to match features
+        transform_required = not is_same_crs(shp.crs, template_crs)
 
-        if not is_same_crs(shp.crs, template_crs):
-            geometries = [transform_geom(shp.crs, template_crs, g) for g in geometries]
+        # Project bbox for filtering
+        bbox = coords.bbox
+        if transform_required:
+            bbox = bbox.project(Proj(**shp.crs), edge_points=21)
+
+        geometries = []
+        for f in shp.filter(bbox=bbox.as_list()):
+            geom = f['geometry']
+            if transform_required:
+                geom = transform_geom(shp.crs, template_crs, geom)
+
+            geometries.append(geom)
+
+    click.echo('Converting {0} features to mask'.format(len(geometries)))
+
+    if invert:
+        fill_value = 0
+        default_value = 1
+    else:
+        fill_value = 1
+        default_value = 0
 
     with rasterio.drivers():
         # Rasterize features to 0, leaving background as 1
@@ -79,13 +99,13 @@ def mask(
             out_shape=mask_shape,
             transform=coords.affine,
             all_touched=all_touched,
-            fill=1,
-            default_value=0,
+            fill=fill_value,
+            default_value=default_value,
             dtype=numpy.uint8
         )
 
     format = 'NETCDF3_CLASSIC' if netcdf3 else 'NETCDF4'
-    dtype = 'int8' if netcdf3 else 'uint8'  #TODO: confirm
+    dtype = 'int8' if netcdf3 else 'uint8'
 
     with Dataset(output, 'w', format=format) as out:
         coords.add_to_dataset(out, template_x_name, template_y_name)

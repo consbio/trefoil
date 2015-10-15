@@ -92,7 +92,7 @@ def zones(
         if transform_required:
             bbox = bbox.project(Proj(**shp.crs), edge_points=21)
 
-        for f in shp.filter(bbox=bbox.as_list()):  # TODO: apply this to mask
+        for f in shp.filter(bbox=bbox.as_list()):
             value = f['properties'].get(attribute) if attribute else int(f['id'])
             if value is not None:
                 geom = f['geometry']
