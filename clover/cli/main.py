@@ -9,3 +9,4 @@ from clover.cli.map_eems import map_eems
 from clover.cli.render_netcdf import render_netcdf
 from clover.cli.render_tif import render_tif
 from clover.cli.warp import warp
+from clover.cli.zones import zones
