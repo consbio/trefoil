@@ -22,9 +22,6 @@ from clover.netcdf.crs import get_crs, is_geographic
 from clover.netcdf.utilities import data_variables, get_fill_value
 
 
-
-
-
 @cli.command(short_help='Create zones in a NetCDF from features in a shapefile')
 @file_in_arg
 @file_out_arg
@@ -58,7 +55,7 @@ def zones(
     the zones variable plus '_values'.
 
     Template NetCDF dataset must have a valid projection defined or be inferred
-    from dimensions (e.g., lat / long)
+    from dimensions (e.g., lat / long).
     """
 
     with Dataset(like) as template_ds:
@@ -160,18 +157,19 @@ def zones(
 
 
     with Dataset(output, 'w', format=format) as out:
+        values_varname = '{0}_values'.format(variable)
         coords.add_to_dataset(out, template_x_name, template_y_name)
         out_var = out.createVariable(variable, out_dtype,
                                      dimensions=spatial_dimensions,
                                      zlib=zip,
                                      fill_value=get_fill_value(out_dtype))
+        out_var.setncattr('values', values_varname)
         out_var[:] = zones
-
 
         out_values = numpy.array([values_lookup[k] for k in range(0, len(values_lookup))])
         if netcdf3 and out_values.dtype == numpy.int64:
             out_values = out_values.astype('int32')
-        values_varname = '{0}_values'.format(variable)
+
         out.createDimension(values_varname, len(out_values))
         values_var = out.createVariable(values_varname, out_values.dtype,
                                         dimensions=(values_varname, ),
@@ -179,15 +177,14 @@ def zones(
         values_var[:] = out_values
 
 
-@cli.command(short_help='Calculate zonal statistics')
+@cli.command(short_help='Calculate zonal statistics for a series of NetCDF files')
 @click.argument('zones', type=click.Path(exists=True))
 @click.argument('filename_pattern')
 @click.argument('output', type=click.Path())
 @click.option('--variables',  type=click.STRING, default=None, help='Comma-separated list of variables (if not provided, will use all data variables)')
-@click.option('--statistics', type=click.STRING, default='mean', help='Comma-separated list of statistics (one of: mean,min,max,std,sum)', show_default=True)
+@click.option('--statistics', type=click.STRING, default='mean', help='Comma-separated list of statistics (available: mean,min,max,std,sum,count)', show_default=True)
 # TODO: consider using shorthand notation for zones:zone_variable instead
 @click.option('--zone_variable', type=click.STRING, default='zone', help='Name of output zones variable', show_default=True)
-# TODO: output format?  CSV vs JSON?  Can infer from filename
 # TODO: precision
 def zonal_stats(
     zones,
@@ -197,19 +194,35 @@ def zonal_stats(
     statistics,
     zone_variable):
 
+    """
+    Calculate zonal statistics for a series of NetCDF files.
+
+    Zones must be created using the 'zones' command.
+
+    The output file can either be a CSV (recommended) or JSON format file, which
+    is automatically determined from the file extension of the output filename.
+
+    See docs/cli.md for more information about output format.
+    """
+
     start = time.time()
 
     if variables:
         variables = variables.split(',')
 
-    statistics = statistics.split(',')  # TODO: validate
+    statistics = statistics.split(',')
     if set(statistics).difference(VALID_ZONAL_STATISTICS):
-        raise click.BadParameter('One or more statistics is not supported {0}'.format(statistics),
-                                 param='--statistics', param_hint='--statistics')
+        raise click.BadParameter(
+            'One or more statistics is not supported {0}'.format(statistics),
+             param='--statistics', param_hint='--statistics'
+        )
 
     filenames = glob.glob(filename_pattern)
     if not filenames:
-        raise click.BadParameter('No files found matching that pattern', param='filename_pattern', param_hint='FILENAME_PATTERN')
+        raise click.BadParameter(
+            'No files found matching that pattern',
+             param='filename_pattern', param_hint='FILENAME_PATTERN'
+        )
 
     with Dataset(zones) as zones_ds:
         if not zone_variable in zones_ds.variables:
@@ -245,7 +258,8 @@ def zonal_stats(
         shape = var_obj.shape
         num_dimensions = len(shape)
         if not var_obj.shape[-2:] == zones.shape:
-            raise click.UsageError('All datasets must have same shape for last 2 dimensions as zones')
+            raise click.UsageError(
+                'All datasets must have same shape for last 2 dimensions as zones')
         if num_dimensions > 3:
             raise click.UsageError('This does not handle > 3 dimensions')
         elif num_dimensions == 3:
@@ -269,7 +283,8 @@ def zonal_stats(
                 var_obj = ds.variables[variable]
 
                 if not var_obj.dimensions[:] == dimensions:
-                    raise click.UsageError('All datasets must have the same dimensions for {0}'.format(variable))
+                    raise click.UsageError(
+                        'All datasets must have the same dimensions for {0}'.format(variable))
 
                 if num_dimensions == 3:
                     results[filename_root][variable] = dict()

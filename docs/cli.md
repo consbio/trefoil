@@ -25,6 +25,7 @@ Commands:
   describe       Describe netCDF files
   extract        Extract variables from files into new datasets in a new
                  directory
+  map_eems       Render a NetCDF EEMS model to a web map
   mask           Create a NetCDF mask from a shapefile
   render_netcdf  Render netcdf files to images
   render_tif     Render Single-Band GeoTIFF files to images
@@ -32,6 +33,8 @@ Commands:
   to_netcdf      Convert rasters to NetCDF
   variables      List variables in netCDF file
   warp           Warp NetCDF files to match a template
+  zonal_stats    Calculate zonal statistics for a series of NetCDF files
+  zones          Create zones in a NetCDF from features in a shapefile
 ```
 
 ## Bin time series
@@ -385,3 +388,114 @@ Options:
 
 Example:
 `> clover warp input_geographic.nc output --like template_mercator.nc`
+
+
+## Calculate zonal statistics on a series of NetCDF files
+
+`zonal_stats` will use zones created by the `zones` command to create zonal 
+statistics for a one or more variables in one or more NetCDF files.
+
+```
+> clover zonal_stats --help
+Usage: clover zonal_stats [OPTIONS] ZONES FILENAME_PATTERN OUTPUT
+
+  Calculate zonal statistics for a series of NetCDF files.
+
+  Zones must be created using the 'zones' command.
+
+  The output file can either be a CSV (recommended) or JSON format file,
+  which is automatically determined from the file extension of the output
+  filename.
+
+  See docs/cli.md for more information about output format.
+
+Options:
+  --variables TEXT      Comma-separated list of variables (if not provided,
+                        will use all data variables)
+  --statistics TEXT     Comma-separated list of statistics (available:
+                        mean,min,max,std,sum,count)  [default: mean]
+  --zone_variable TEXT  Name of output zones variable  [default: zone]
+```
+
+CSV output has the following header:
+
+`filename, variable, <3rd dimension name, if 3D>, zone, <statistic_1>, ... <statistic_N>`
+
+JSON output is a nested data structure, that varies in depth based on
+presence of a 3rd dimension.
+
+2 dimensions:
+```
+{
+    "filename": {
+        "variable": {
+            "zone": {
+                "statistic": value
+            }
+        }
+    }
+}
+```
+
+3 dimensions:
+```
+{
+    "filename": {
+        "variable": {
+            "3rd dimension value": {
+                "zone": {
+                    "statistic": value
+                }
+            }
+        }
+    }
+}
+```
+
+
+## Create zones based on features
+
+`zones` creates zones in a NetCDF file using features from a shapefile and
+a template raster to determine the spatial context.
+
+Currently zones are represented as a single, 2D variable.  This means that
+assignment of pixels (esp. large pixels) to features is determined by
+GDAL's internal algorithms, and does not make this determination based on the
+maximum area of overlap (as is done in other GIS platforms).  We recommend
+caution and inspection of outputs when using this for small features and large 
+pixels.
+
+Note: because a values lookup is used to control the output data type, and allow
+use of string attributes for zones, the data in the zone variable is simply
+an integer lookup.  Do not expect to pull this into a GIS and compare values
+to the original features.
+
+```
+> clover zones --help
+Usage: clover zones [OPTIONS] INPUT OUTPUT
+
+  Create zones in a NetCDF from features in a shapefile.  This is intended
+  to be used as input to zonal statistics functions; it is not intended as a
+  direct replacement for rasterizing geometries into NetCDF.
+
+  Only handles < 65,535 features for now.
+
+  If --attribute is provided, any features that do not have this will not be
+  assigned to zones.
+
+  A values lookup will be used to store values.  The zones are indices of
+  the unique values encountered when extracting features. The original values
+  are stored in an additional variable with the name of the zones variable
+  plus '_values'.
+
+  Template NetCDF dataset must have a valid projection defined or be
+  inferred from dimensions (e.g., lat / long).
+
+Options:
+  --variable TEXT   Name of output zones variable  [default: zone]
+  --attribute TEXT  Name of attribute in shapefile to use for zones (default:
+                    feature ID)
+  --like PATH       Template NetCDF dataset  [required]
+  --netcdf3         Output in NetCDF3 version instead of NetCDF4
+  --zip             Use zlib compression of data and coordinate variables
+```
