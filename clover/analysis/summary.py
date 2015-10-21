@@ -1,6 +1,10 @@
 import numpy
 import time
 
+
+VALID_ZONAL_STATISTICS = {'mean', 'min', 'max', 'std', 'sum', 'count'}
+
+
 def summarize_count_by_category(values):
     """
     Tallys the pixel counts for each unique value found in values.
@@ -106,3 +110,64 @@ def statistic_by_interval(values, interval, statistic='mean'):
         return temp[:, :interval, :, :].mean(axis=1)
     elif statistic == 'sum':
         return temp[:, :interval, :, :].sum(axis=1)
+
+
+# TODO: this might make more sense as a loop in Cython
+def calculate_zonal_statistics(zones, zone_values, values, statistics):
+    """
+    Calculate zonal statistics for each zone in zones.
+
+    Parameters
+    zones: numpy ndarray
+        expected to be 2D
+    zone_values: list-like
+        1D array of zone values.  Index in this list used to match the zone
+        index in the zones array.
+    values: numpy ndarray
+        expected to be 2 or 3D.
+        instead of a single value
+    statistics: list-like
+        must be one of mean, min, max, std, sum, count
+
+    Returns
+    -------
+    dict:  {zone: {statistic: value or [values]} }
+    """
+
+    if set(statistics).difference(VALID_ZONAL_STATISTICS):
+        raise ValueError('One or more statistics is not supported {0}'.format(statistics))
+
+    if not len(values.shape) in (2, 3):
+        raise ValueError('Input values expected to be 2 or 3D')
+
+    if not hasattr(values, 'mask'):
+        values = numpy.ma.masked_array(values)
+
+    axis = None
+    if len(values.shape) == 3:
+        values = values.reshape(values.shape[0], values.shape[1] * values.shape[2])
+        zones = zones.flat
+        axis = 1
+
+    results = {}
+    for zone_idx, zone in enumerate(zone_values):
+        if hasattr(zone, 'item'):
+            zone = zone.item()
+
+        masked = numpy.ma.masked_array(values, mask=values.mask | (zones==zone_idx))
+
+        # skip if all pixels are masked
+        if masked.mask.min() == True:
+            continue
+
+        zone_results = dict()
+        for statistic in statistics:
+            # Call the function dynamically
+            if statistic == 'count':
+                zone_results[statistic] = (masked.mask == False).sum(axis=axis)
+            else:
+                zone_results[statistic] = getattr(masked, statistic)(axis=axis)
+
+        results[zone] = zone_results
+
+    return results

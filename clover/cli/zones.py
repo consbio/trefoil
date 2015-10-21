@@ -2,6 +2,7 @@ import csv
 import glob
 import os
 import time
+import json
 
 import click
 from pyproj import Proj
@@ -15,9 +16,13 @@ from rasterio.warp import transform_geom
 from rasterio.rio.options import file_in_arg, file_out_arg
 
 from clover.cli import cli
+from clover.analysis.summary import VALID_ZONAL_STATISTICS, calculate_zonal_statistics
 from clover.netcdf.variable import SpatialCoordinateVariables
 from clover.netcdf.crs import get_crs, is_geographic
 from clover.netcdf.utilities import data_variables, get_fill_value
+
+
+
 
 
 @cli.command(short_help='Create zones in a NetCDF from features in a shapefile')
@@ -125,7 +130,7 @@ def zones(
         elif num_geometries < 65535:
             dtype = numpy.dtype('uint16')
         else:
-            raise click.Abort('Too many features to rasterize: {0}, aborting...'.format(num_geometries))
+            raise click.UsageError('Too many features to rasterize: {0}, Exceptioning...'.format(num_geometries))
 
         fill_value = get_fill_value(dtype)
 
@@ -162,7 +167,10 @@ def zones(
                                      fill_value=get_fill_value(out_dtype))
         out_var[:] = zones
 
+
         out_values = numpy.array([values_lookup[k] for k in range(0, len(values_lookup))])
+        if netcdf3 and out_values.dtype == numpy.int64:
+            out_values = out_values.astype('int32')
         values_varname = '{0}_values'.format(variable)
         out.createDimension(values_varname, len(out_values))
         values_var = out.createVariable(values_varname, out_values.dtype,
@@ -171,13 +179,12 @@ def zones(
         values_var[:] = out_values
 
 
-
 @cli.command(short_help='Calculate zonal statistics')
 @click.argument('zones', type=click.Path(exists=True))
 @click.argument('filename_pattern')
 @click.argument('output', type=click.Path())
 @click.option('--variables',  type=click.STRING, default=None, help='Comma-separated list of variables (if not provided, will use all data variables)')
-@click.option('--statistics', type=click.STRING, default='avg', help='Comma-separated list of statistics (one of: avg,min,max)', show_default=True)
+@click.option('--statistics', type=click.STRING, default='mean', help='Comma-separated list of statistics (one of: mean,min,max,std,sum)', show_default=True)
 # TODO: consider using shorthand notation for zones:zone_variable instead
 @click.option('--zone_variable', type=click.STRING, default='zone', help='Name of output zones variable', show_default=True)
 # TODO: output format?  CSV vs JSON?  Can infer from filename
@@ -193,7 +200,9 @@ def zonal_stats(
     start = time.time()
 
     statistics = statistics.split(',')  # TODO: validate
-
+    if set(statistics).difference(VALID_ZONAL_STATISTICS):
+        raise click.BadParameter('One or more statistics is not supported {0}'.format(statistics),
+                                 param='--statistics', param_hint='--statistics')
 
     filenames = glob.glob(filename_pattern)
     if not filenames:
@@ -227,85 +236,74 @@ def zonal_stats(
         shape = var_obj.shape
         num_dimensions = len(shape)
         if not var_obj.shape[-2:] == zones.shape:
-            raise click.Abort('All datasets must have same shape for last 2 dimensions as zones')
+            raise click.UsageError('All datasets must have same shape for last 2 dimensions as zones')
         if num_dimensions > 3:
-            raise click.Abort('This does not handle > 3 dimensions')
+            raise click.UsageError('This does not handle > 3 dimensions')
         elif num_dimensions == 3:
             z_values = ds.variables[dimensions[0]][:]
 
+    results = {}
+    for filename in filenames:
+        with Dataset(filename) as ds:
+            filename_root = os.path.split(filename)[1].replace('.nc', '')
+
+            click.echo('Processing {0}'.format(filename))
+
+            if set(variables).difference(ds.variables.keys()):
+                raise click.BadParameter('One or more variables were not found in {0}'.format(filename),
+                                         param='--variables', param_hint='--variables')
+
+            results[filename_root] = dict()
+
+            for variable in variables:
+                var_obj = ds.variables[variable]
+
+                if not var_obj.dimensions[:] == dimensions:
+                    raise click.UsageError('All datasets must have the same dimensions for {0}'.format(variable))
+
+                if num_dimensions == 3:
+                    results[filename_root][variable] = dict()
+
+                    for z_idx in range(shape[0]):
+                        z_value = z_values[z_idx].item()  # TODO: actually need to resolve z_idx to a time value in time variable!
+                        data = numpy.ma.masked_array(var_obj[z_idx])
+                        results[filename_root][variable][z_value] = calculate_zonal_statistics(zones, zone_values, data, statistics)
+
+                    # this way works too, but may run out of memory
+                    # output below would need to be updated to use this though
+                    # data = numpy.ma.masked_array(var_obj[:])
+                    # results[filename_root][variable] = calculate_zonal_statistics(zones, zone_values, data, statistics)
+
+                else:
+                    data = numpy.ma.masked_array(var_obj[:])
+                    results[filename_root][variable] = calculate_zonal_statistics(zones, zone_values, data, statistics)
+
     with open(output, 'wb') as outfile:
-        writer = csv.writer(outfile)
-        header = ['filename', 'variable']
-        if num_dimensions == 3:
-            header += [dimensions[0]]
-        header += ['zone'] + statistics
-        writer.writerow(header)
+        if os.path.splitext(output)[1] == '.json':
+            outfile.write(json.dumps(results, indent=2))
+        else:
+            writer = csv.writer(outfile)
+            header = ['filename', 'variable']
+            if num_dimensions == 3:
+                header += [dimensions[0]]
+            header += ['zone'] + statistics
+            writer.writerow(header)
 
-        for filename in filenames:
-            with Dataset(filename) as ds:
-                click.echo('Processing {0}'.format(filename))
+            rows = []
 
-                if set(variables).difference(ds.variables.keys()):
-                    raise click.BadParameter('One or more variables were not found in {0}'.format(filename),
-                                             param='--variables', param_hint='--variables')
-
-                for variable in variables:
-                    var_obj = ds.variables[variable]
-
-                    if not var_obj.dimensions[:] == dimensions:
-                        raise click.Abort('All datasets must have the same dimensions for {0}'.format(variable))
-
-                    filename_root = os.path.split(filename)[1].replace('.nc', '')
-
+            for filename in results:
+                for variable in results[filename]:
                     if num_dimensions == 3:
-                        for z_idx in range(shape[0]):
-                            # TODO: actually need to resolve z_idx to a time value in time variable!
-                            z_value = z_values[z_idx]  # TODO: may need to convert time to better units!
-
-                            data = numpy.ma.masked_array(var_obj[z_idx])
-                            for zone_idx in range(0, zone_values.shape[0]):
-                                masked = numpy.ma.masked_array(data, mask=data.mask | (zones==zone_idx))
-
-                                # skip if all pixels are masked
-                                if masked.mask.min() == True:
-                                    continue
-
-                                row = [filename_root, variable, z_value, zone_values[zone_idx]]
-                                for stat in statistics:
-                                    result = ''
-                                    if stat == 'avg':
-                                        result = masked.mean().item()
-                                    elif stat == 'min':
-                                        result = masked.min().item()
-                                    elif stat == 'max':
-                                        result = masked.max().item()
-                                    row.append(result)
-
-                                writer.writerow(row)
-
-
-                            # Alternative using axis, may run out of memory!  Was slower!
-                            # data = numpy.ma.masked_array(var_obj[:])
-                            # data = data.reshape(data.shape[0], numpy.product(data.shape[1:]))
-                            # flat_zones = zones.flat
-                            # for zone_idx in range(0, zone_values.shape[0]):
-                            #     masked = numpy.ma.masked_array(data, mask=data.mask | (flat_zones == zone_idx))
-                            #     means = masked.mean(axis=1)
-                                # TODO
-                                # row = [filename_root, variable, z_idx, zone_values[zone_idx]]
-                                # for stat in statistics:
-                                #     result = ''
-                                #     if stat == 'avg':
-                                #         result = masked.mean()
-                                #     elif stat == 'min':
-                                #         result = masked.min()
-                                #     elif stat == 'max':
-                                #         result = masked.max()
-                                #     row.append(result)
-
-                                # writer.writerow(row)
-
+                        for z_value in results[filename][variable]:
+                            for zone in results[filename][variable][z_value]:
+                                result = results[filename][variable][z_value][zone]
+                                rows.append([filename, variable, z_value, zone] + [result[stat] for stat in statistics])
                     else:
-                        raise NotImplementedError('TODO')
+                        for zone in results[filename][variable]:
+                            result = results[filename][variable][zone]
+                            rows.append([filename, variable, zone] + [result[stat] for stat in statistics])
+
+            for row in rows:
+                writer.writerow(row)
 
     click.echo('Elapsed: {0:.2f}'.format(time.time() - start))
