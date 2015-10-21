@@ -154,7 +154,8 @@ def calculate_zonal_statistics(zones, zone_values, values, statistics):
         if hasattr(zone, 'item'):
             zone = zone.item()
 
-        masked = numpy.ma.masked_array(values, mask=values.mask | (zones==zone_idx))
+        zone_mask = zones != zone_idx  # mask out everything that is NOT the zone
+        masked = numpy.ma.masked_array(values, mask=values.mask | zone_mask)
 
         # skip if all pixels are masked
         if masked.mask.min() == True:
