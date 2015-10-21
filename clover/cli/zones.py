@@ -199,6 +199,9 @@ def zonal_stats(
 
     start = time.time()
 
+    if variables:
+        variables = variables.split(',')
+
     statistics = statistics.split(',')  # TODO: validate
     if set(statistics).difference(VALID_ZONAL_STATISTICS):
         raise click.BadParameter('One or more statistics is not supported {0}'.format(statistics),
@@ -226,12 +229,18 @@ def zonal_stats(
         zone_values = zones_ds.variables[values_variable][:]
 
     with Dataset(filenames[0]) as ds:
-        variables = variables.split(',') if variables is not None else list(data_variables(ds).keys())
-        if set(variables).difference(ds.variables.keys()):
-            raise click.BadParameter('One or more variables were not found in {0}'.format(filenames[0]),
-                                     param='--variables', param_hint='--variables')
+        if variables is not None:
+            if set(variables).difference(ds.variables.keys()):
+                raise click.BadParameter(
+                    'One or more variables were not found in {0}'.format(filenames[0]),
+                     param='--variables', param_hint='--variables'
+                )
+            first_variable = variables[0]
 
-        var_obj = ds.variables[variables[0]]
+        else:
+            first_variable = list(data_variables(ds).keys())[0]
+
+        var_obj = ds.variables[first_variable]
         dimensions = var_obj.dimensions
         shape = var_obj.shape
         num_dimensions = len(shape)
@@ -249,13 +258,14 @@ def zonal_stats(
 
             click.echo('Processing {0}'.format(filename))
 
-            if set(variables).difference(ds.variables.keys()):
-                raise click.BadParameter('One or more variables were not found in {0}'.format(filename),
-                                         param='--variables', param_hint='--variables')
+            if variables is not None and set(variables).difference(ds.variables.keys()):
+                raise click.BadParameter(
+                    'One or more variables were not found in {0}'.format(filenames[0]),
+                     param='--variables', param_hint='--variables'
+                )
 
             results[filename_root] = dict()
-
-            for variable in variables:
+            for variable in (variables or list(data_variables(ds).keys())):
                 var_obj = ds.variables[variable]
 
                 if not var_obj.dimensions[:] == dimensions:
