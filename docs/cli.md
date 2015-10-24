@@ -312,6 +312,8 @@ Usage: clover to_netcdf [OPTIONS] FILES OUTPUT VARIABLE
 
   Will overwrite an existing NetCDF file.
 
+  Only the first band of the input will be turned into a NetCDF file.
+
 Options:
   --dtype [float32|float64|int8|int16|int32|uint8|uint16|uint32]
                                   Data type of output variable.  Will be
@@ -334,6 +336,8 @@ Options:
                                   [default: float32]
   --calendar TEXT                 Calendar to use if z dimension is a date
                                   type  [default: standard]
+  --autocrop                      Automatically crop to data bounds (trim
+                                  NODATA)
 ```
 
 Example:
