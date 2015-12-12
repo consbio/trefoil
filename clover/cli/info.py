@@ -11,7 +11,7 @@ from clover.cli.utilities import get_mask
 def print_dict(d, depth=0):
     space = '  '
     keys = d.keys()
-    keys.sort()
+    keys = sorted(keys)
     for key in keys:
         value = d[key]
         if isinstance(value, dict) and len(value) > 1:
