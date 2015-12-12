@@ -8,7 +8,7 @@ import click
 from pyproj import Proj
 import rasterio
 from rasterio import crs
-from rasterio._io import get_data_window, union_windows
+from rasterio import get_data_window, window_union
 
 from clover.cli import cli
 from clover.netcdf.variable import SpatialCoordinateVariables, DateVariable
@@ -167,7 +167,7 @@ def to_netcdf(
                 max_value = max(maxs)
                 scale, offset = get_pack_atts(dtype, min_value, max_value)
             if autocrop and windows:
-                window = union_windows(windows)
+                window = window_union(windows)
                 bounds = template_ds.window_bounds(window)
                 height = window[0][1] - window[0][0]
                 width = window[1][1] - window[1][0]
