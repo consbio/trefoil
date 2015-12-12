@@ -62,7 +62,7 @@ def copy_dimension(source_dataset, target_dataset, name, overwrite=True, allow_u
         return target_dataset.createDimension(name, len(source_dimension))
 
 
-def copy_variable(source_dataset, target_dataset, name, overwrite=True, **kwargs):
+def copy_variable(source_dataset, target_dataset, name, out_name=None, overwrite=True, **kwargs):
     """
     Copies a variable to a netCDF file, deleting it if it already exists (unless overwrite is false).
     Copies the required dimensions first, if they don't already exist.
@@ -72,12 +72,16 @@ def copy_variable(source_dataset, target_dataset, name, overwrite=True, **kwargs
     :param source_dataset: the source netCDF dataset
     :param target_dataset: the target netCDF to copy into.  Must be in edit / write mode.
     :param name: the name of the variable
+    :param out_name: the output name of the variable
     :param overwrite: if true, overwrite the variable if it exists in the target
     """
 
-    if name in target_dataset.variables:
+    if not out_name:
+        out_name = name
+
+    if out_name in target_dataset.variables:
         if overwrite:
-            del target_dataset.variables[name]
+            del target_dataset.variables[out_name]
         else:
             raise Exception("Target variable already exists, and overwrite is false")
 
@@ -98,7 +102,7 @@ def copy_variable(source_dataset, target_dataset, name, overwrite=True, **kwargs
     if 'fill_value' not in kwargs and source_variable.dtype != numpy.dtype('str'):
         kwargs['fill_value'] = get_fill_value_for_variable(source_variable)
 
-    target_variable = target_dataset.createVariable(name, source_variable.dtype, source_variable.dimensions, **kwargs)
+    target_variable = target_dataset.createVariable(out_name, source_variable.dtype, source_variable.dimensions, **kwargs)
     target_variable[:] = source_variable[:]
     for attribute_name in source_variable.ncattrs():
         if not attribute_name in target_variable.ncattrs():
