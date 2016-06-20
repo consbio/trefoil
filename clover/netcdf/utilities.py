@@ -370,11 +370,16 @@ def data_variables(ds):
     Returns subset of ds.variables that are data rather than dimension variables
     """
 
-    vars_with_bounds = [v for v in ds.variables.values() if 'bounds' in v.ncattrs()]
-    bounds_vars = [v.getncattr('bounds') for v in vars_with_bounds]
+    exclude_vars = set()
+    exclude_atts = ('bounds', 'grid_mapping')  # exclude variables referenced from these attributes
+    for v in ds.variables.values():
+        atts = get_ncattrs(v)
+        for att in exclude_atts:
+            if att in atts:
+                exclude_vars.add(atts[att])
 
     return OrderedDict([(k, v) for k, v in ds.variables.iteritems()
-                        if k not in ds.dimensions and k not in bounds_vars])
+                        if k not in ds.dimensions and k not in exclude_vars])
 
 
 def get_pack_atts(dtype, min_value, max_value):
