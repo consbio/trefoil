@@ -11,7 +11,7 @@ netCDF4>=1.1.1
 Numpy
 Pillow>=2.9.0
 pyproj
-rasterio>=0.26
+rasterio>=0.36
 
 
 

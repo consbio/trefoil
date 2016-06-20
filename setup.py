@@ -26,7 +26,7 @@ setup(
         'Numpy',
         'Pillow>=2.9.0',
         'pyproj',
-        'rasterio>=0.26'
+        'rasterio>=0.36'
     ],
     entry_points='''
         [console_scripts]

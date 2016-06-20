@@ -13,7 +13,7 @@ import re
 from pyproj import Proj, pj_list, pj_ellps, pyproj_datadir
 
 from clover.netcdf.utilities import get_ncattrs, set_ncattrs
-from rasterio import crs as crs_utils
+from rasterio.crs import CRS
 
 
 PROJ4_GEOGRAPHIC = '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs'
@@ -155,7 +155,7 @@ def get_crs(dataset, variable_name):
         proj4_params[CF_PROJ4_ELLPSOID_MAP[param]] = crs_atts[param]
 
     try:
-        return Proj(crs_utils.to_string(proj4_params)).srs
+        return Proj(**CRS(proj4_params).to_dict()).srs
 
     except:
         # Could not create valid projection
@@ -188,7 +188,7 @@ def set_crs(dataset, variable_name, projection, set_proj4_att=False):
     if set_proj4_att:
         variable.setncattr(PROJ4_KEY, proj_string)
 
-    proj_data = crs_utils.from_string(proj_string)
+    proj_data = CRS.from_string(proj_string).to_dict()
     proj_key = proj_data['proj']
     if not proj_key in PROJ4_CF_PARAM_MAP.keys():
         raise ValueError('CF Convention mapping is not yet available for projection {0}'.format(proj_key))

@@ -3,7 +3,7 @@ from netCDF4 import Dataset
 from pyproj import Proj, pj_ellps
 from clover.netcdf.crs import get_crs, set_crs, is_geographic
 from clover.netcdf.utilities import get_ncattrs, set_ncattrs
-from rasterio import crs as crs_utils
+from rasterio.crs import CRS
 
 import logging, sys
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
@@ -32,10 +32,10 @@ def test_get_crs(tmpdir):
     out_proj4 = get_crs(ds, 'data')
     assert out_proj4 is not None
 
-    out_data = crs_utils.from_string(out_proj4)
+    out_data = CRS.from_string(out_proj4).to_dict()
 
     assert len(out_data) == 8  # There should be 8 parameters
-    assert crs_utils.from_string(in_proj4) == out_data
+    assert CRS.from_string(in_proj4).to_dict() == out_data
 
     # Test WGS84 lat/long
     data_var = ds.createVariable('data2', 'S1')
@@ -54,11 +54,11 @@ def test_get_crs(tmpdir):
     out_proj4 = get_crs(ds, 'data2')
     assert out_proj4 is not None
 
-    out_data = crs_utils.from_string(out_proj4)
+    out_data = CRS.from_string(out_proj4).to_dict()
 
     assert len(out_data) == 4  # There should be 4 parameters
     # Note: pyproj adds units=m even for latlong, which is incorrect but not our problem
-    assert crs_utils.from_string(in_proj4 + ' +units=m') == out_data
+    assert CRS.from_string(in_proj4 + ' +units=m').to_dict() == out_data
 
 
 def test_set_crs(tmpdir):
@@ -138,10 +138,10 @@ def test_symmetric_proj4(tmpdir):
     set_crs(ds, 'data', Proj(proj4), set_proj4_att=True)
     out_proj4 = get_crs(ds, 'data')
 
-    out_data = crs_utils.from_string(out_proj4)
+    out_data = CRS.from_string(out_proj4).to_dict()
 
     assert len(out_data) == 9  # There should be 9 parameters
-    assert crs_utils.from_string(proj4) == out_data
+    assert CRS.from_string(proj4).to_dict() == out_data
 
 
 def test_utm(tmpdir):
@@ -151,7 +151,7 @@ def test_utm(tmpdir):
     set_crs(ds, 'data', Proj(proj4), set_proj4_att=True)
     out_proj4 = get_crs(ds, 'data')
 
-    out_data = crs_utils.from_string(out_proj4)
+    out_data = CRS.from_string(out_proj4).to_dict()
 
     # ESPG will have been converted to long form
     assert len(out_data) == 6

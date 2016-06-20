@@ -4,7 +4,7 @@ from netCDF4 import Dataset
 import numpy
 import fiona
 import rasterio
-from rasterio.crs import is_same_crs, from_string
+from rasterio.crs import CRS
 from rasterio.features import rasterize
 from rasterio.warp import transform_geom
 from rasterio.rio.options import file_in_arg, file_out_arg
@@ -49,9 +49,9 @@ def mask(
         template_crs = get_crs(template_ds, template_varname)
 
         if template_crs:
-            template_crs = from_string(template_crs)
+            template_crs = CRS.from_string(template_crs)
         elif is_geographic(template_ds, template_varname):
-            template_crs = {'init': 'EPSG:4326'}
+            template_crs = CRS({'init': 'EPSG:4326'})
         else:
             raise click.UsageError('template dataset must have a valid projection defined')
 
@@ -63,12 +63,12 @@ def mask(
             template_ds,
             x_name=template_x_name,
             y_name=template_y_name,
-            projection=Proj(**template_crs)
+            projection=Proj(**template_crs.to_dict())
         )
 
 
     with fiona.open(input, 'r') as shp:
-        transform_required = not is_same_crs(shp.crs, template_crs)
+        transform_required = CRS(shp.crs) != template_crs
 
         # Project bbox for filtering
         bbox = coords.bbox
