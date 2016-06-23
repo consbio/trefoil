@@ -5,7 +5,7 @@ import webbrowser
 from netCDF4 import Dataset
 import click
 from pyproj import Proj
-from rasterio import crs
+from rasterio.crs import CRS
 from rasterio.warp import RESAMPLING, calculate_default_transform
 from jinja2 import Environment, PackageLoader
 
@@ -105,7 +105,7 @@ def map_eems(
         if not ds_crs and is_geographic(ds, template_var):
             ds_crs = 'EPSG:4326'  # Assume all geographic data is WGS84
 
-        src_crs = crs.from_string(ds_crs) if ds_crs else {'init': src_crs} if src_crs else None
+        src_crs = CRS.from_string(ds_crs) if ds_crs else CRS({'init': src_crs}) if src_crs else None
 
         # get transforms, assume last 2 dimensions on variable are spatial in row, col order
         y_dim, x_dim = dimensions[-2:]
@@ -125,7 +125,7 @@ def map_eems(
                                      param='--src-crs',
                                      param_hint='--src-crs')
 
-        dst_crs = crs.from_string(dst_crs)
+        dst_crs = CRS.from_string(dst_crs)
 
         src_height, src_width = coords.shape
         dst_transform, dst_width, dst_height = calculate_default_transform(

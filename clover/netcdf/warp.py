@@ -2,7 +2,7 @@ import numpy
 from pyproj import Proj
 import click
 import rasterio
-from rasterio import crs
+from rasterio.crs import CRS
 from rasterio.warp import reproject, RESAMPLING
 
 from clover.netcdf.crs import get_crs
@@ -127,7 +127,7 @@ def warp_like(ds, ds_projection, variables, out_ds, template_ds, template_varnam
 
             reproject_kwargs = {
                 'src_transform': ds_coords.affine,
-                'src_crs': crs.from_string(ds_projection),
+                'src_crs': CRS.from_string(ds_projection),
                 'dst_transform': template_coords.affine,
                 'dst_crs': template_prj.srs,
                 'resampling': resampling,

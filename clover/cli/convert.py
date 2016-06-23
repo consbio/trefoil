@@ -7,7 +7,7 @@ import numpy
 import click
 from pyproj import Proj
 import rasterio
-from rasterio import crs
+from rasterio.crs import CRS
 from rasterio import get_data_window, window_union
 
 from clover.cli import cli
@@ -108,7 +108,7 @@ def to_netcdf(
         raise click.BadParameter('Required when > 1 input file', param='--z', param_hint='--z')
 
     if src_crs:
-        src_crs = crs.from_string(src_crs)
+        src_crs = CRS.from_string(src_crs)
 
     template_ds = rasterio.open(filenames[0])
     src_crs = template_ds.crs or src_crs
@@ -117,7 +117,7 @@ def to_netcdf(
         raise click.BadParameter('Required when no CRS information available in source files', param='--src-crs',
                                  param_hint='--src_crs')
 
-    prj = Proj(**src_crs)
+    prj = Proj(**src_crs.to_dict())
     bounds = template_ds.bounds
     width = template_ds.width
     height = template_ds.height
@@ -134,8 +134,8 @@ def to_netcdf(
     else:
         fill_value = get_fill_value(dtype)
 
-    x_name = x_name or ('lon' if crs.is_geographic_crs(src_crs) else 'x')
-    y_name = y_name or ('lat' if crs.is_geographic_crs(src_crs) else 'y')
+    x_name = x_name or ('lon' if src_crs.is_geographic else 'x')
+    y_name = y_name or ('lat' if src_crs.is_geographic else 'y')
 
     var_kwargs = {
         'fill_value': fill_value
