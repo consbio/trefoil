@@ -115,7 +115,7 @@ def to_netcdf(
 
     if not src_crs:
         raise click.BadParameter('Required when no CRS information available in source files', param='--src-crs',
-                                 param_hint='--src_crs')
+                                 param_hint='--src-crs')
 
     prj = Proj(**src_crs.to_dict())
     bounds = template_ds.bounds
