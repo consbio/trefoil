@@ -45,6 +45,7 @@ PROJ4_CF_ELLIPSOID_MAP = {
 PROJ4_CF_NAMES = {
     'aea': 'albers_conical_equal_area',
     'latlong': 'latitude_longitude',
+    'laea': 'lambert_azimuthal_equal_area',
     'lcc': 'lambert_conformal_conic',
     'stere': 'polar_stereographic',
     'tmerc': 'transverse_mercator',
@@ -60,6 +61,12 @@ PROJ4_CF_PARAM_MAP = {
         'y_0': 'false_northing'
     },
     'latlong': {},  # No extra parameters for lat / long
+    'laea': {
+        'lat_0': 'latitude_of_projection_origin',
+        'lon_0': 'longitude_of_projection_origin',
+        'x_0': 'false_easting',
+        'y_0': 'false_northing'
+    },
     'lcc': {
         'lat_0': 'latitude_of_projection_origin',
         'lat_{0}': 'standard_parallel',
@@ -67,6 +74,7 @@ PROJ4_CF_PARAM_MAP = {
         'x_0': 'false_easting',
         'y_0': 'false_northing'
     },
+
     'stere': {
         'k_0': 'scale_factor',
         'lat_0': 'latitude_of_projection_origin',
