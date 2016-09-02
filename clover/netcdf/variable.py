@@ -320,8 +320,17 @@ class SpatialCoordinateVariables(object):
 
         x_pixel_size = (bbox.xmax - bbox.xmin) / float(x_size)
         y_pixel_size = (bbox.ymax - bbox.ymin) / float(y_size)
-        x = SpatialCoordinateVariable(numpy.arange(bbox.xmin + (x_pixel_size / 2.0), bbox.xmax, x_pixel_size, dtype=dtype))
-        y = SpatialCoordinateVariable(numpy.arange(bbox.ymax - (y_pixel_size / 2.0), bbox.ymin, -y_pixel_size, dtype=dtype))
+
+        x_arr = numpy.arange(x_size, dtype=dtype)
+        x_arr *= x_pixel_size
+        x_arr += (bbox.xmin + x_pixel_size / 2.0)
+
+        y_arr = numpy.arange(0, -y_size, -1, dtype=dtype)
+        y_arr *= y_pixel_size
+        y_arr += (bbox.ymax - x_pixel_size / 2.0)
+
+        x = SpatialCoordinateVariable(x_arr)
+        y = SpatialCoordinateVariable(y_arr)
 
         return SpatialCoordinateVariables(x, y, bbox.projection)
 
