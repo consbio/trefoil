@@ -303,7 +303,7 @@ class SpatialCoordinateVariables(object):
         )
 
     @staticmethod
-    def from_bbox(bbox, x_size, y_size, dtype='float32'):
+    def from_bbox(bbox, x_size, y_size, dtype='float32', y_ascending=False):
         """
         Return a SpatialCoordinateVariables object from BBox and dimensions
 
@@ -311,6 +311,7 @@ class SpatialCoordinateVariables(object):
         :param x_size: number of pixels in x dimension (width or number of columns)
         :param y_size: number of pixels in y dimension (height or number of rows)
         :param dtype: data type (string or numpy dtype object) of values
+        :param y_ascending: by default, y values are anchored from top left and are descending; if True, this inverts that order
         :return: CoordinateVariables instance, assuming that rows are ordered in decreasing value
         """
 
@@ -325,9 +326,15 @@ class SpatialCoordinateVariables(object):
         x_arr *= x_pixel_size
         x_arr += (bbox.xmin + x_pixel_size / 2.0)
 
-        y_arr = numpy.arange(0, -y_size, -1, dtype=dtype)
-        y_arr *= y_pixel_size
-        y_arr += (bbox.ymax - y_pixel_size / 2.0)
+        if y_ascending:
+            y_arr = numpy.arange(y_size, dtype=dtype)
+            y_arr *= y_pixel_size
+            y_arr += (bbox.ymin + y_pixel_size / 2.0)
+
+        else:
+            y_arr = numpy.arange(0, -y_size, -1, dtype=dtype)
+            y_arr *= y_pixel_size
+            y_arr += (bbox.ymax - y_pixel_size / 2.0)
 
         x = SpatialCoordinateVariable(x_arr)
         y = SpatialCoordinateVariable(y_arr)
