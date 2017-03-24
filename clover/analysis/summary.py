@@ -102,7 +102,7 @@ def statistic_by_interval(values, interval, statistic='mean'):
     assert len(values.shape) == 3  # Anything else is not handled correctly right now
     assert values.shape[0] % interval == 0
 
-    num_intervals = values.shape[0] / interval
+    num_intervals = int(values.shape[0] / interval)
     # Reshape to groups of intervals, intervals, then remaining shape of values
     temp = values.reshape(num_intervals, interval, values.shape[1], values.shape[2])
 
