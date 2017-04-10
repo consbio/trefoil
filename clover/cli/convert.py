@@ -17,7 +17,7 @@ from clover.netcdf.utilities import get_pack_atts, get_fill_value
 from clover.geometry.bbox import BBox
 
 
-DATE_REGEX = re.compile('%[yY]')  # TODO: add all appropriate strftime directives
+DATE_REGEX = re.compile('%[yYmd]')  # TODO: add all appropriate strftime directives
 
 
 @cli.command(short_help='Convert rasters to NetCDF')
@@ -70,12 +70,12 @@ def to_netcdf(
     date_format = ''
     if '%' in files:
         # Parse out dates according to datetime.strftime rules, replace
+        date_format = files
+
         directives = re.findall(DATE_REGEX, files)
 
         if not directives:
             raise click.BadParameter('Invalid pattern', param='FILES', param_hint='FILES')
-
-        date_format = ''.join(directives)
 
         for d in directives:
             pattern = '[0-9][0-9]'
@@ -92,10 +92,9 @@ def to_netcdf(
     if file_regex:
         pairs = []
         for filename in filenames:
-            date_obj = datetime.strptime(file_regex.search(filename).group(), date_format)
+            date_obj = datetime.strptime(filename, date_format)
             pairs.append((date_obj, filename))
 
-        # pairs = [(int(file_regex.search(f).group()), f) for f in filenames]
         pairs = sorted(pairs, key=lambda x: x[0])
         z_values = [item[0] for item in pairs]
         filenames = [item[1] for item in pairs]

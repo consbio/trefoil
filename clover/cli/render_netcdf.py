@@ -142,7 +142,8 @@ def render_netcdf(
         if variable in renderer_dict and not 'colors' in renderer_dict:
             renderer_dict = renderer_dict[variable]
 
-        if renderer_dict['type'] == 'stretched':
+        renderer_type = renderer_dict['type']
+        if renderer_type == 'stretched':
             colors = ','.join([str(c[0]) for c in renderer_dict['colors']])
             if 'min' in colors or 'max' in colors or 'mean' in colors:
                 statistics = collect_statistics(filenames, (variable,), mask=mask)[variable]
