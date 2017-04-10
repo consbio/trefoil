@@ -341,7 +341,7 @@ Options:
 ```
 
 Example:
-`> clover to_netcdf inputs_*.asc my_var --dtype uint8 --src-crs EPSG:4326`
+`> clover to_netcdf "inputs_*.asc" output.nc my_var --dtype uint8 --src-crs EPSG:4326`
 
 Will produce a NetCDF file with longitude and latitude dimensions, and a Z
 dimension that is of the same size as the number of files that meet the filename
@@ -349,7 +349,7 @@ pattern.  Files are stacked in the order they are listed in the directory
 (alphabetically).  The data variable `my_var` will contain the data read from
 the ArcASCII files, converted to unsigned 8 bit integers.
 
-`> clover to_netcdf inputs_%Y.asc my_var --dtype uint8 --src-crs EPSG:4326`
+`> clover to_netcdf inputs_%Y.asc output.nc my_var --dtype uint8 --src-crs EPSG:4326`
 
 Will produce a similar output, but will use the `%Y` expression to match 4 digit
 years and add those to a temporal dimension and coordinate variable, stored
