@@ -155,7 +155,7 @@ def to_netcdf(
                 width = window[1][1] - window[1][0]
 
         coords = SpatialCoordinateVariables.from_bbox(BBox(bounds, prj), width, height, xy_dtype)
-        coords.add_to_dataset(out, x_name, y_name, zlib=zip)
+        coords.add_to_dataset(out, x_name, y_name, zlib=compress)
 
         var_dimensions = [y_name, x_name]
         shape = list(coords.shape)
@@ -172,7 +172,7 @@ def to_netcdf(
         click.echo('Creating {0}:{1} with shape {2}'.format(output, variable, shape))
 
         out_var = out.createVariable(variable, dtype, dimensions=var_dimensions,
-                                     zlib=zip, **var_kwargs)
+                                     zlib=compress, **var_kwargs)
         set_crs(out, variable, prj, set_proj4_att=True)
 
         if packed:
