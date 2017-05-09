@@ -466,13 +466,13 @@ class DateVariable(CoordinateVariable):
 
     @property
     def unit(self):
-        def varys_by_year(x, y):
+        def varies_by_year(x, y):
             if y.year == x.year or (y - x).seconds != 0 or x.month != y.month or x.day != y.day:
                 return False
 
             return True
 
-        def varys_by_month(x, y):
+        def varies_by_month(x, y):
             if x.month == y.month or (y - x).seconds != 0 or x.day != y.day:
                 return False
 
@@ -481,9 +481,9 @@ class DateVariable(CoordinateVariable):
         datetimes = self.datetimes if not self.values.dtype == datetime else self.values
         deltas = datetimes[1:] - datetimes[:-1]
 
-        if all(varys_by_year(datetimes[i], datetimes[i-1]) for i in range(1, len(datetimes))):
+        if all(varies_by_year(datetimes[i], datetimes[i-1]) for i in range(1, len(datetimes))):
             return 'year'
-        elif all(varys_by_month(datetimes[i], datetimes[i-1]) for i in range(1, len(datetimes))):
+        elif all(varies_by_month(datetimes[i], datetimes[i-1]) for i in range(1, len(datetimes))):
             return 'month'
 
         for unit, seconds in (('day', 86400), ('hour', 3600), ('minute', 60), ('second', 1)):
