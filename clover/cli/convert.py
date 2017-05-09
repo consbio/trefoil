@@ -75,7 +75,6 @@ def to_netcdf(
 
     z_values = []
 
-    # Need to be able to sort things in the right order and stack them into the appropriate dimension
     if datetime_pattern is not None:
         datetimes = (datetime.strptime(x, datetime_pattern) for x in filenames)
 

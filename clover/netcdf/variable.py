@@ -479,12 +479,13 @@ class DateVariable(CoordinateVariable):
             return True
 
         datetimes = self.datetimes if not self.values.dtype == datetime else self.values
-        deltas = datetimes[1:] - datetimes[:-1]
 
         if all(varies_by_year(datetimes[i], datetimes[i-1]) for i in range(1, len(datetimes))):
             return 'year'
         elif all(varies_by_month(datetimes[i], datetimes[i-1]) for i in range(1, len(datetimes))):
             return 'month'
+
+        deltas = datetimes[1:] - datetimes[:-1]
 
         for unit, seconds in (('day', 86400), ('hour', 3600), ('minute', 60), ('second', 1)):
             if any(x.seconds % seconds != 0 for x in deltas):
