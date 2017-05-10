@@ -128,29 +128,10 @@ def describe(path_or_dataset):
                         date_variable = DateVariable(time_variable)
                         values = date_variable.datetimes
                         time_info['extent'] = [values.min().isoformat(), values.max().isoformat()]
-
-                        all_years = numpy.array([x.year for x in values])
-                        num_years = numpy.unique(all_years).size
-                        if num_years == all_years.size:
-                            time_info['interval_unit'] = 'year'
-                            interval = get_interval(all_years)
-                            if interval:
-                                time_info['interval'] = interval
-
-                        elif all_years.size / num_years == 12:
-                            # Note: doesn't account for weird cases of having contiguous months,
-                            # but in years that are not contiguous (e.g., J-D for 2010, then J-D for 2020)
-                            time_info.update({
-                                'interval_unit': 'month',
-                                'interval': 1
-                            })
-                        else:
-                            # using days
-                            # TODO: test this case!
-                            time_info['interval_unit'] = 'day'
-                            interval = get_interval(time_variable)
-                            if interval:
-                                time_info['interval'] = interval
+                        time_info['interval_unit'] = date_variable.unit
+                        interval = get_interval(time_variable)
+                        if interval is not None:
+                            time_info['interval'] = interval
 
                     except ValueError:
                         pass

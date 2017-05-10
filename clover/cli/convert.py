@@ -1,6 +1,8 @@
 import glob
 from datetime import datetime
 import re
+from operator import itemgetter
+
 from netCDF4 import Dataset
 
 import numpy
@@ -29,8 +31,9 @@ DATE_REGEX = re.compile('%[yYmd]')  # TODO: add all appropriate strftime directi
 @click.option('--x', 'x_name', type=click.STRING, help='Name of x dimension and variable (default: lon or x)')
 @click.option('--y', 'y_name', type=click.STRING, help='Name of y dimension and variable (default: lat or y)')
 @click.option('--z', 'z_name', type=click.STRING, default='time', help='Name of z dimension and variable', show_default=True)
+@click.option('--datetime-pattern', type=click.STRING, help='strftime-style pattern to parse date and time from the filename')
 @click.option('--netcdf3', is_flag=True, default=False, help='Output in NetCDF3 version instead of NetCDF4')
-@click.option('--zip', is_flag=True, default=False, help='Use zlib compression of data and coordinate variables')
+@click.option('--zip', 'compress', is_flag=True, default=False, help='Use zlib compression of data and coordinate variables')
 @click.option('--packed', is_flag=True, default=False, help='Pack floating point values into an integer (will lose precision)')
 @click.option('--xy-dtype', type=click.Choice(['float32', 'float64']), default='float32', help='Data type of spatial coordinate variables.', show_default=True)
 # @click.option('--z-dtype', type=click.Choice(['float32', 'float64', 'int8', 'int16', 'int32', 'uint8', 'uint16', 'uint32']), default=None, help='Data type of z variable.  Will be inferred from values if not provided.')
@@ -45,8 +48,9 @@ def to_netcdf(
     x_name,
     y_name,
     z_name,
+    datetime_pattern,
     netcdf3,
-    zip,
+    compress,
     packed,
     xy_dtype,
     # z_dtype,
@@ -63,41 +67,19 @@ def to_netcdf(
     Only the first band of the input will be turned into a NetCDF file.
     """
 
-
     # TODO: add format string template to this to parse out components
-    # Need to be able to sort things in the right order and stack them into the appropriate dimension
-    file_regex = None
-    date_format = ''
-    if '%' in files:
-        # Parse out dates according to datetime.strftime rules, replace
-        date_format = files
-
-        directives = re.findall(DATE_REGEX, files)
-
-        if not directives:
-            raise click.BadParameter('Invalid pattern', param='FILES', param_hint='FILES')
-
-        for d in directives:
-            pattern = '[0-9][0-9]'
-            if d == '%Y':
-                pattern += pattern
-            file_regex = re.compile(pattern)
-            files = files.replace(d, pattern)
 
     filenames = glob.glob(files)
     if not filenames:
         raise click.BadParameter('No files found matching that pattern', param='files', param_hint='FILES')
 
     z_values = []
-    if file_regex:
-        pairs = []
-        for filename in filenames:
-            date_obj = datetime.strptime(filename, date_format)
-            pairs.append((date_obj, filename))
 
-        pairs = sorted(pairs, key=lambda x: x[0])
-        z_values = [item[0] for item in pairs]
-        filenames = [item[1] for item in pairs]
+    if datetime_pattern is not None:
+        datetimes = (datetime.strptime(x, datetime_pattern) for x in filenames)
+
+        # Sort both datimes and filenames by datetimes
+        z_values, filenames = [list(x) for x in zip(*sorted(zip(datetimes, filenames), key=itemgetter(0)))]
 
     items = tuple(enumerate(filenames))
 
@@ -172,7 +154,7 @@ def to_netcdf(
                 width = window[1][1] - window[1][0]
 
         coords = SpatialCoordinateVariables.from_bbox(BBox(bounds, prj), width, height, xy_dtype)
-        coords.add_to_dataset(out, x_name, y_name, zlib=zip)
+        coords.add_to_dataset(out, x_name, y_name, zlib=compress)
 
         var_dimensions = [y_name, x_name]
         shape = list(coords.shape)
@@ -189,7 +171,7 @@ def to_netcdf(
         click.echo('Creating {0}:{1} with shape {2}'.format(output, variable, shape))
 
         out_var = out.createVariable(variable, dtype, dimensions=var_dimensions,
-                                     zlib=zip, **var_kwargs)
+                                     zlib=compress, **var_kwargs)
         set_crs(out, variable, prj, set_proj4_att=True)
 
         if packed:

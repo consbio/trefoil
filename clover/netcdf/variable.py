@@ -442,7 +442,7 @@ class DateVariable(CoordinateVariable):
             else:
                 raise ValueError('Variable is missing required attributes: units, calendar')
         else:
-            self.units = 'days since {0}'.format(str(units_start_date))
+            self.units = '{0}s since {1}'.format(self.unit, str(units_start_date))
             self.calendar = calendar
 
             if self.values.dtype.kind in ('i', 'u', 'f'):
@@ -463,6 +463,36 @@ class DateVariable(CoordinateVariable):
             return self.dates
         else:
             return numpy.array([datetime(*d.timetuple()[:6], tzinfo=pytz.UTC) for d in self.dates])
+
+    @property
+    def unit(self):
+        def varies_by_year(x, y):
+            if y.year == x.year or (y - x).seconds != 0 or x.month != y.month or x.day != y.day:
+                return False
+
+            return True
+
+        def varies_by_month(x, y):
+            if x.month == y.month or (y - x).seconds != 0 or x.day != y.day:
+                return False
+
+            return True
+
+        datetimes = self.datetimes if not self.values.dtype == datetime else self.values
+
+        if all(varies_by_year(datetimes[i], datetimes[i-1]) for i in range(1, len(datetimes))):
+            return 'year'
+        elif all(varies_by_month(datetimes[i], datetimes[i-1]) for i in range(1, len(datetimes))):
+            return 'month'
+
+        deltas = datetimes[1:] - datetimes[:-1]
+
+        for unit, seconds in (('day', 86400), ('hour', 3600), ('minute', 60), ('second', 1)):
+            if any(x.seconds % seconds != 0 for x in deltas):
+                continue
+            break
+
+        return unit
 
     def add_to_dataset(self, dataset, name, **kwargs):
         variable = super(DateVariable, self).add_to_dataset(dataset, name, **kwargs)
