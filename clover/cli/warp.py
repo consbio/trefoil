@@ -3,7 +3,7 @@ import glob
 from netCDF4 import Dataset
 
 import click
-from rasterio.warp import RESAMPLING
+from rasterio.enums import Resampling
 
 from clover.cli import cli
 from clover.netcdf.warp import warp_like
@@ -63,5 +63,5 @@ def warp(
                     out_ds=out_ds,
                     template_ds=template_ds,
                     template_varname=template_varname,
-                    resampling=getattr(RESAMPLING, resampling)
+                    resampling=getattr(Resampling, resampling)
                 )

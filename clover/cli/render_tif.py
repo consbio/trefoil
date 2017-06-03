@@ -18,7 +18,8 @@ from PIL.Image import ANTIALIAS, NEAREST
 from pyproj import Proj
 
 import rasterio
-from rasterio.warp import reproject, RESAMPLING, calculate_default_transform
+from rasterio.warp import reproject, calculate_default_transform
+from rasterio.enums import Resampling
 
 from clover.utilities.color import Color
 from clover.render.renderers.stretched import StretchedRenderer
@@ -274,7 +275,7 @@ def render_tif(
                     'src_transform': ds.affine,
                     'dst_crs': dst_crs,
                     'dst_transform': dst_affine,
-                    'resampling': getattr(RESAMPLING, resampling),
+                    'resampling': getattr(Resampling, resampling),
                     'dst_shape': dst_shape
                 }
 

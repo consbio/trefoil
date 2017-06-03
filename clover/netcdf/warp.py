@@ -3,7 +3,8 @@ from pyproj import Proj
 import click
 import rasterio
 from rasterio.crs import CRS
-from rasterio.warp import reproject, RESAMPLING
+from rasterio.warp import reproject
+from rasterio.enums import Resampling
 
 from clover.netcdf.crs import get_crs
 from clover.netcdf.utilities import copy_variable, copy_dimension, get_fill_value
@@ -17,7 +18,7 @@ def warp_array(
     dst_crs,
     dst_transform,
     dst_shape,
-    resampling=RESAMPLING.nearest):
+    resampling=Resampling.nearest):
 
     """
     Warp a 2D array using rasterio, always returning a masked array.
@@ -66,7 +67,7 @@ def warp_array(
 
 
 
-def warp_like(ds, ds_projection, variables, out_ds, template_ds, template_varname, resampling=RESAMPLING.nearest):
+def warp_like(ds, ds_projection, variables, out_ds, template_ds, template_varname, resampling=Resampling.nearest):
     """
     Warp one or more variables in a NetCDF file based on the coordinate reference system and
     spatial domain of a template NetCDF file.
@@ -76,7 +77,7 @@ def warp_like(ds, ds_projection, variables, out_ds, template_ds, template_varnam
     :param out_ds: output dataset.  Must be opened in write or append mode.
     :param template_ds: template dataset
     :param template_varname: variable name for template data variable in template dataset
-    :param resampling: resampling method.  See rasterio.warp.RESAMPLING for options
+    :param resampling: resampling method.  See rasterio.enums.Resampling for options
     """
 
     template_variable = template_ds.variables[template_varname]
