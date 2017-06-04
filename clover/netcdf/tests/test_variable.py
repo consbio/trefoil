@@ -48,6 +48,13 @@ def test_range_functions():
     assert numpy.array_equal(variable.slice_by_range(40, 50), numpy.array([]))
 
 
+def test_window_for_bbox():
+    coords = SpatialCoordinateVariables.from_bbox(BBox([-124, 82, -122, 90], Proj(init='epsg:4326')), 20, 20)
+    window = coords.get_window_for_bbox(BBox([-123.9, 82.4, -122.2, 89.6]))
+
+    assert window.x_slice == slice(1, 19)
+    assert window.y_slice == slice(1, 19)
+
 
 def test_BoundsCoordinateVariable():
     bounds = numpy.array(((0, 1), (1, 2)))
