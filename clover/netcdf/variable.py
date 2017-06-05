@@ -61,8 +61,8 @@ class CoordinateVariable(object):
         if self.is_ascending_order():
             start_index = min(self.values.searchsorted(start), self.values.size - 1)
 
-            # Need to move 1 index to the left unless we matched an index exactly
-            if start_index > 0 and start < self.values[start_index]:
+            # Need to move 1 index to the left unless we matched an index closely (allowing for precision errors)
+            if start_index > 0 and not numpy.isclose(start, self.values[start_index]):
                 start_index -= 1
             stop_index = self.values.searchsorted(stop)
             if stop_index >= self.values.size:
@@ -72,7 +72,7 @@ class CoordinateVariable(object):
             # If values are not ascending, they need to be reversed
             temp = self.values[::-1]
             start_index = min(temp.searchsorted(start), temp.size - 1)
-            if start_index > 0 and start < temp[start_index]:
+            if start_index > 0 and not numpy.isclose(start, temp[start_index]):
                 start_index -= 1
             stop_index = temp.searchsorted(stop)
             size = self.values.size - 1
@@ -403,8 +403,11 @@ class SpatialCoordinateVariables(object):
 
         assert isinstance(bbox, BBox)
 
-        y_offset, y_max = self.y.indices_for_range(bbox.ymin, bbox.ymax)
-        x_offset, x_max =  self.x.indices_for_range(bbox.xmin, bbox.xmax)
+        y_half_pixel_size = float(self.y.pixel_size)/2
+        x_half_pixel_size = float(self.x.pixel_size)/2
+
+        y_offset, y_max = self.y.indices_for_range(bbox.ymin + y_half_pixel_size, bbox.ymax - y_half_pixel_size)
+        x_offset, x_max =  self.x.indices_for_range(bbox.xmin + x_half_pixel_size, bbox.xmax - x_half_pixel_size)
         return Window((y_offset, y_max + 1), (x_offset, x_max + 1))
 
 
