@@ -64,17 +64,24 @@ class CoordinateVariable(object):
             # Need to move 1 index to the left unless we matched an index closely (allowing for precision errors)
             if start_index > 0 and not numpy.isclose(start, self.values[start_index]):
                 start_index -= 1
-            stop_index = self.values.searchsorted(stop)
-            if stop_index >= self.values.size:
+
+            stop_index = min(self.values.searchsorted(stop), self.values.size - 1)
+            if not numpy.isclose(stop, self.values[stop_index]) and stop < self.values[stop_index]:
                 stop_index -= 1
+
             return start_index, stop_index
         else:
             # If values are not ascending, they need to be reversed
             temp = self.values[::-1]
             start_index = min(temp.searchsorted(start), temp.size - 1)
+
             if start_index > 0 and not numpy.isclose(start, temp[start_index]):
                 start_index -= 1
-            stop_index = temp.searchsorted(stop)
+
+            stop_index = min(temp.searchsorted(stop), temp.size - 1)
+            if not numpy.isclose(stop, temp[stop_index]) and stop < temp[stop_index]:
+                stop_index -= 1
+
             size = self.values.size - 1
             return max(size - stop_index, 0), max(size - start_index, 0)
 
