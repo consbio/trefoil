@@ -50,7 +50,7 @@ def test_range_functions():
 
 def test_window_for_bbox():
     coords = SpatialCoordinateVariables.from_bbox(BBox([-124, 82, -122, 90], Proj(init='epsg:4326')), 20, 20)
-    window = coords.get_window_for_bbox(BBox([-123.9, 82.4, -122.2, 89.6]))
+    window = coords.get_window_for_bbox(BBox([-123.9, 82.4, -122.1, 89.6]))
 
     assert window.x_slice == slice(1, 19)
     assert window.y_slice == slice(1, 19)
@@ -109,11 +109,11 @@ def test_SpatialCoordinateVariables_slice_by_bbox():
     proj = Proj(init='EPSG:4326')
     coords = SpatialCoordinateVariables(lon, lat, proj)
 
-    subset = coords.slice_by_bbox(BBox((2.25, 4.1, 5.7, 16.2), proj))
-    assert numpy.array_equal(subset.x.values, numpy.arange(2, 7))
+    subset = coords.slice_by_bbox(BBox((1.75, 3.7, 6.2, 16.7), proj))
+    assert numpy.array_equal(subset.x.values, numpy.arange(2, 6))
     assert subset.x.values[0] == 2
-    assert subset.x.values[-1] == 6
-    assert subset.y.values[0] == 17
+    assert subset.x.values[-1] == 5
+    assert subset.y.values[0] == 16
     assert subset.y.values[-1] == 4
 
 

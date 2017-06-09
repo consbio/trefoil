@@ -374,9 +374,16 @@ class SpatialCoordinateVariables(object):
     def slice_by_bbox(self, bbox):
         assert isinstance(bbox, BBox)
 
+        x_half_pixel_size = float(self.x.pixel_size)/2
+        y_half_pixel_size = float(self.y.pixel_size)/2
+
         # Note: this is very sensitive to decimal precision.
-        x = SpatialCoordinateVariable(self.x.slice_by_range(bbox.xmin, bbox.xmax))
-        y = SpatialCoordinateVariable(self.y.slice_by_range(bbox.ymin, bbox.ymax))
+        x = SpatialCoordinateVariable(
+            self.x.slice_by_range(bbox.xmin + x_half_pixel_size, bbox.xmax - x_half_pixel_size)
+        )
+        y = SpatialCoordinateVariable(
+            self.y.slice_by_range(bbox.ymin + y_half_pixel_size, bbox.ymax - y_half_pixel_size)
+        )
         return SpatialCoordinateVariables(x, y, self.projection)
 
     def slice_by_window(self, window):
