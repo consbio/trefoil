@@ -64,14 +64,18 @@ def describe(path_or_dataset):
         }
 
         if dtype not in ('str', ):
-            try:
+            if len(variable.shape) > 2:
+                # Avoid loading the entire array into memory by iterating along the first index (usually time)
+                variable_info.update({
+                    'min': min(variable[i, :].min().item() for i in range(variable.shape[0])),
+                    'max': max(variable[i, :].max().item() for i in range(variable.shape[0]))
+                })
+            else:
                 data = variable[:]
                 variable_info.update({
                     'min': data.min().item(),
                     'max': data.max().item()
                 })
-            except MemoryError:
-                pass  # TODO: find a better way to handle this
 
         if variable_name in dataset.dimensions and dtype not in ('str', ):
             dimension_variable = dataset.variables[variable_name]
