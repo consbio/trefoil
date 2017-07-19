@@ -459,7 +459,7 @@ class DateVariable(CoordinateVariable):
             else:
                 raise ValueError('Variable is missing required attributes: units, calendar')
         else:
-            self.units = '{0}s since {1}'.format(self.unit, str(units_start_date))
+            self.units = 'year' if self.unit == 'year' else '{0}s since {1}'.format(self.unit, str(units_start_date))
             self.calendar = calendar
 
             if self.values.dtype.kind in ('i', 'u', 'f'):
@@ -467,7 +467,12 @@ class DateVariable(CoordinateVariable):
             elif isinstance(self.values[0], datetime):
                 self.dates = self.values.copy()
 
-            self.values = numpy.array(date2num(self.dates, units=self.units, calendar=self.calendar), dtype=numpy.int32)
+            if self.unit == 'year':
+                self.values = numpy.array([x.year for x in self.values], dtype='int32')
+            else:
+                self.values = numpy.array(
+                    date2num(self.dates, units=self.units, calendar=self.calendar), dtype=numpy.int32
+                )
 
     @property
     def datetimes(self):
