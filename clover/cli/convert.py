@@ -69,7 +69,7 @@ def to_netcdf(
 
     # TODO: add format string template to this to parse out components
 
-    filenames = glob.glob(files)
+    filenames = list(glob.glob(files))
     if not filenames:
         raise click.BadParameter('No files found matching that pattern', param='files', param_hint='FILES')
 
