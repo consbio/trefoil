@@ -16,7 +16,7 @@ def array_to_raster(data, outfilename=None, format='GTiff', affine=Affine.identi
     meta = {
         'width': data.shape[1],
         'height': data.shape[0],
-        'dtype': data.dtype,
+        'dtype': data.dtype.name, # rasterio uses strings, not dtypes
         'transform': affine,
         'count': 1,
         'crs': projection.srs

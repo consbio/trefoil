@@ -89,7 +89,7 @@ def _palette_to_stretched_renderer(palette_path, values, filenames=None, variabl
 def render_image(renderer, data, filename, scale=1, reproject_kwargs=None):
     if reproject_kwargs is not None:
 
-        with rasterio.drivers():
+        with rasterio.Env():
             out = numpy.empty(shape=reproject_kwargs['dst_shape'], dtype=data.dtype)
             out.fill(data.fill_value)
             reproject(data, out, **reproject_kwargs)

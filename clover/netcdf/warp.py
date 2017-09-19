@@ -33,7 +33,7 @@ def warp_array(
     All other parameters are the same as for rasterio.warp.reproject
     """
 
-    with rasterio.drivers():
+    with rasterio.Env():
         orig_dtype = arr.dtype
         if arr.dtype == numpy.int8:
             # Have to upcast for rasterio
@@ -97,7 +97,7 @@ def warp_like(ds, ds_projection, variables, out_ds, template_ds, template_varnam
     proj = Proj(init=ds_projection) if 'EPSG:' in ds_projection.upper() else Proj(str(ds_projection))
     ds_coords = SpatialCoordinateVariables.from_dataset(ds, x_name=ds_x_name, y_name=ds_y_name, projection=proj)
 
-    with rasterio.drivers():
+    with rasterio.Env():
         # Copy dimensions for variable across to output
         for dim_name in template_variable.dimensions:
             if not dim_name in out_ds.dimensions:

@@ -94,7 +94,7 @@ def bin_ts(files, variable, outdir, statistic, interval, zlib):
 
             spatial_dims = var_obj.dimensions[-2:]
             z_dim = var_obj.dimensions[0]
-            num_intervals = var_obj.shape[0] / interval
+            num_intervals = var_obj.shape[0] // interval
 
             if var_obj.shape[0] % interval != 0:
                 click.echo('WARNING: Anything beyond the last full interval will be dropped')

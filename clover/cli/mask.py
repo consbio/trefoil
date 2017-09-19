@@ -92,7 +92,7 @@ def mask(
         fill_value = 1
         default_value = 0
 
-    with rasterio.drivers():
+    with rasterio.Env():
         # Rasterize features to 0, leaving background as 1
         mask = rasterize(
             geometries,
