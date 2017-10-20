@@ -23,7 +23,8 @@ from netCDF4 import Dataset
 import click
 from pyproj import Proj
 from rasterio.crs import CRS
-from rasterio.warp import RESAMPLING, calculate_default_transform
+from rasterio.warp import calculate_default_transform
+from rasterio.enums import Resampling
 from jinja2 import Environment, PackageLoader
 
 from clover.render.renderers.utilities import renderer_from_dict
@@ -260,7 +261,7 @@ def render_netcdf(
                 'src_transform': coords.affine,
                 'dst_crs': dst_crs,
                 'dst_transform': dst_transform,
-                'resampling': getattr(RESAMPLING, resampling),
+                'resampling': getattr(Resampling, resampling),
                 'dst_shape': (dst_height, dst_width)
             }
 

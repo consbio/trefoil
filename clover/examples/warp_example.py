@@ -1,7 +1,7 @@
 from netCDF4 import Dataset
 
 from pyproj import Proj
-from rasterio.warp import RESAMPLING
+from rasterio.enums import Resampling
 
 from clover.netcdf.utilities import data_variables
 from clover.netcdf.warp import warp_like
@@ -22,7 +22,7 @@ with Dataset('c:/temp/out.nc', 'w') as out_ds:
         out_ds=out_ds,
         template_ds=template_ds,
         template_varname=template_variable_name,
-        resampling=RESAMPLING.cubic  # could also be RESAMPLING.nearest
+        resampling=Resampling.cubic  # could also be Resampling.nearest
     )
 
 

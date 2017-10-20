@@ -36,4 +36,4 @@ def test_netcdf_to_raster(tmpdir):
         assert src.height == height
         assert src.crs.to_string() == '+init=epsg:4326'
         assert src.dtypes[0] == data.dtype
-        assert numpy.array_equal(data, src.read_band(1))
+        assert numpy.array_equal(data, src.read(1))

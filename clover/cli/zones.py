@@ -133,7 +133,7 @@ def zones(
 
         click.echo('Rasterizing {0} features into zones'.format(num_geometries))
 
-    with rasterio.drivers():
+    with rasterio.Env():
         zones = rasterize(
             geometries,
             out_shape=out_shape,
