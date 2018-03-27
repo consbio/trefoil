@@ -378,7 +378,7 @@ def data_variables(ds):
             if att in atts:
                 exclude_vars.add(atts[att])
 
-    return OrderedDict([(k, v) for k, v in ds.variables.iteritems()
+    return OrderedDict([(k, v) for k, v in six.iteritems(ds.variables)
                         if k not in ds.dimensions and k not in exclude_vars])
 
 
