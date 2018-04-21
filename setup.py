@@ -2,13 +2,15 @@ from setuptools import setup
 
 setup(
     name='trefoil',
-    version='0.2.2',
+    version='0.3.0',
     packages=['trefoil',
               'trefoil.analysis', 'trefoil.cli',
               'trefoil.geometry', 'trefoil.geometry.tests',
               'trefoil.netcdf', 'trefoil.render',
               'trefoil.render.renderers', 'trefoil.render.renderers.tests',
-              'trefoil.utilities', 'trefoil.utilities.tests'],
+              'trefoil.utilities', 'trefoil.utilities.tests',
+              # for temporary backward compatibility only!  Will be removed in near future
+              'clover'],
     url='https://github.com/databasin/trefoil',
     license='see LICENSE',
     author='databasin',

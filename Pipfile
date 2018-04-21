@@ -24,3 +24,5 @@ pillow = "==5.0.0"
 
 pytest = "*"
 pytest-cov = "*"
+wheel = "*"
+twine = "*"
