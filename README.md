@@ -43,8 +43,12 @@ Biology Institute.
 
 
 ## Installation
-[pipenv](https://github.com/pypa/pipenv) is used for managing dependencies.
+[pipenv](https://github.com/pypa/pipenv) is used for managing dependencies in this project.
 
+`pipenv install trefoil`
+
+
+### No longer directly maintained / supported:
 On Windows, install the ones that require compiling from [Python Windows Packages](http://www.lfd.uci.edu/~gohlke/pythonlibs/).
 Then install the remainder using `pip`
 
