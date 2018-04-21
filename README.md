@@ -41,7 +41,7 @@ Biology Institute.
 
 
 ## Installation
-See ```requirements.txt``` for list of dependencies.
+[pipenv](https://github.com/pypa/pipenv) is used for managing dependencies.
 
 On Windows, install the ones that require compiling from [Python Windows Packages](http://www.lfd.uci.edu/~gohlke/pythonlibs/).
 Then install the remainder using `pip`
