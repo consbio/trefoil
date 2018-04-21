@@ -9,7 +9,7 @@ python:
 install:
   - "pip install pipenv --upgrade"
   - "pipenv install --dev --skip-lock"
-  - "pipenv install coveralls"
+  - "pipenv install coveralls --skip-lock"
 
 script:
   - "pipenv run py.test --cov trefoil --cov-report term-missing"
