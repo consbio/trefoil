@@ -1,20 +1,20 @@
-# Clover's Command Line Interface
+# Trefoil's Command Line Interface
 
 *Note: under active development.  Expect new commands and options.*
 
 Use `--help` option on any command for more information about how to use that
 command.
 
-Nearly throughout, clover assumes that data have a 2 dimensional geospatial 
+Nearly throughout, trefoil assumes that data have a 2 dimensional geospatial
 component (y, x) and an optional temporal component.
 
 
 ```
-> clover --help
+> trefoil --help
 
-Usage: clover [OPTIONS] COMMAND [ARGS]...
+Usage: trefoil [OPTIONS] COMMAND [ARGS]...
 
-  Command line interface for clover
+  Command line interface for trefoil
 
 Options:
   --help  Show this message and exit.
@@ -45,9 +45,9 @@ Commands:
 annual time series into a decadal time series.
 
 ```
-> clover bin_ts --help
+> trefoil bin_ts --help
 
-Usage: clover bin_ts [OPTIONS] FILES VARIABLE
+Usage: trefoil bin_ts [OPTIONS] FILES VARIABLE
 
   Bin time series data by an interval, according to a statistic.
 
@@ -61,7 +61,7 @@ Options:
 ```
 
 Example:
-`> clover bin_ts input.nc in_var --interval 10`
+`> trefoil bin_ts input.nc in_var --interval 10`
 
 Assuming input.nc has a 3rd dimension 50 steps long, this will create a new 
 dataset called `input_bin.nc` in the same directory, with 5 steps, each of which
@@ -77,9 +77,9 @@ interval of the input.
 input file (for each time period, if they have a temporal dimension).
 
 ```
-> clover delta --help
+> trefoil delta --help
 
-Usage: clover delta [OPTIONS] BASELINE FILES VARIABLE
+Usage: trefoil delta [OPTIONS] BASELINE FILES VARIABLE
 
 Options:
   --bidx INTEGER  Index in baseline if 3D (default 0)
@@ -95,7 +95,7 @@ and variables in this dataset, along with information about spatial and temporal
 extents if they can be determined.
 
 Example: 
-`> clover describe input.nc`
+`> trefoil describe input.nc`
 
 
 
@@ -115,9 +115,9 @@ This is typically used to mask in areas within an area of interest, and mask out
 areas that are outside.
 
 ```
-> clover mask --help
+> trefoil mask --help
 
-Usage: clover mask [OPTIONS] INPUT OUTPUT
+Usage: trefoil mask [OPTIONS] INPUT OUTPUT
 
   Create a NetCDF mask from a shapefile.
 
@@ -137,7 +137,7 @@ Options:
 ```
 
 Example:
-`> clover mask my_shapefile.shp mask.nc --like template.nc --all-touched`
+`> trefoil mask my_shapefile.shp mask.nc --like template.nc --all-touched`
 
 Will produce a mask that is `False` in all pixels covered by the shapefile's
 features, and `True` everywhere else.
@@ -155,9 +155,9 @@ map viewer in your browser with the images from this file spatially anchored
 over the map.
 
 ```
-> clover render_netcdf --help
+> trefoil render_netcdf --help
 
-Usage: clover render_netcdf [OPTIONS] FILENAME_PATTERN VARIABLE
+Usage: trefoil render_netcdf [OPTIONS] FILENAME_PATTERN VARIABLE
                             OUTPUT_DIRECTORY
 
   Render netcdf files to images.
@@ -220,7 +220,7 @@ Options:
 ```
 
 Example:
-`> clover render_netcdf inputs_*.nc in_var img --colormap min:#00F,max:#F00`
+`> trefoil render_netcdf inputs_*.nc in_var img --colormap min:#00F,max:#F00`
 
 Will render each time slice of each of the inputs to an image, using a blue to
 red stretched renderer (in HSV color space, by default), stretched from the
@@ -238,8 +238,8 @@ appropriate for all variables.  Use `nearest` if any variables are categorical.
 
 
 ```
-> clover map_eems --help
-Usage: clover map_eems [OPTIONS] EEMS_FILE
+> trefoil map_eems --help
+Usage: trefoil map_eems [OPTIONS] EEMS_FILE
 
   Render a NetCDF EEMS model to a web map.
 
@@ -272,9 +272,9 @@ Can be optionally masked.
 
 
 ```
-> clover stats --help
+> trefoil stats --help
 
-Usage: clover stats [OPTIONS] FILES VARIABLES
+Usage: trefoil stats [OPTIONS] FILES VARIABLES
 
   Calculate statistics for each variable across all files
 
@@ -284,7 +284,7 @@ Options:
 ```
 
 Example:
-`> clover stats input.nc in_var1,in_var2`
+`> trefoil stats input.nc in_var1,in_var2`
 
 
 ## Convert rasters to NetCDF
@@ -301,9 +301,9 @@ file with geospatial and temporal dimensions.
 
 
 ```
-> clover to_netcdf --help
+> trefoil to_netcdf --help
 
-Usage: clover to_netcdf [OPTIONS] FILES OUTPUT VARIABLE
+Usage: trefoil to_netcdf [OPTIONS] FILES OUTPUT VARIABLE
 
   Convert rasters to NetCDF and stack them according to a dimension.
 
@@ -341,7 +341,7 @@ Options:
 ```
 
 Example:
-`> clover to_netcdf "inputs_*.asc" output.nc my_var --dtype uint8 --src-crs EPSG:4326`
+`> trefoil to_netcdf "inputs_*.asc" output.nc my_var --dtype uint8 --src-crs EPSG:4326`
 
 Will produce a NetCDF file with longitude and latitude dimensions, and a Z
 dimension that is of the same size as the number of files that meet the filename
@@ -349,7 +349,7 @@ pattern.  Files are stacked in the order they are listed in the directory
 (alphabetically).  The data variable `my_var` will contain the data read from
 the ArcASCII files, converted to unsigned 8 bit integers.
 
-`> clover to_netcdf inputs_%Y.asc output.nc my_var --dtype uint8 --src-crs EPSG:4326`
+`> trefoil to_netcdf inputs_%Y.asc output.nc my_var --dtype uint8 --src-crs EPSG:4326`
 
 Will produce a similar output, but will use the `%Y` expression to match 4 digit
 years and add those to a temporal dimension and coordinate variable, stored
@@ -362,7 +362,7 @@ on the input calendar).
 `variables` lists the data and coordinate variables within the NetCDF dataset.
 
 Example:
-`> clover variables input.nc`
+`> trefoil variables input.nc`
 
 
 ## Reproject a variable in a NetCDF file
@@ -374,9 +374,9 @@ in the output directory.
 
 
 ```
-> clover warp --help
+> trefoil warp --help
 
-Usage: clover warp [OPTIONS] FILENAME_PATTERN OUTPUT_DIRECTORY
+Usage: trefoil warp [OPTIONS] FILENAME_PATTERN OUTPUT_DIRECTORY
 
 Options:
   --variables TEXT                comma-delimited list of variables to warp.
@@ -391,7 +391,7 @@ Options:
 ```
 
 Example:
-`> clover warp input_geographic.nc output --like template_mercator.nc`
+`> trefoil warp input_geographic.nc output --like template_mercator.nc`
 
 
 ## Calculate zonal statistics on a series of NetCDF files
@@ -400,8 +400,8 @@ Example:
 statistics for a one or more variables in one or more NetCDF files.
 
 ```
-> clover zonal_stats --help
-Usage: clover zonal_stats [OPTIONS] ZONES FILENAME_PATTERN OUTPUT
+> trefoil zonal_stats --help
+Usage: trefoil zonal_stats [OPTIONS] ZONES FILENAME_PATTERN OUTPUT
 
   Calculate zonal statistics for a series of NetCDF files.
 
@@ -475,8 +475,8 @@ an integer lookup.  Do not expect to pull this into a GIS and compare values
 to the original features.
 
 ```
-> clover zones --help
-Usage: clover zones [OPTIONS] INPUT OUTPUT
+> trefoil zones --help
+Usage: trefoil zones [OPTIONS] INPUT OUTPUT
 
   Create zones in a NetCDF from features in a shapefile.  This is intended
   to be used as input to zonal statistics functions; it is not intended as a

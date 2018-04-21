@@ -9,6 +9,6 @@ install:
   - "pipenv install --dev --skip-lock"
 
 script:
-  - "pipenv run py.test --cov clover --cov-report term-missing"
+  - "pipenv run py.test --cov trefoil --cov-report term-missing"
 after_success:
   - coveralls

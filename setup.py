@@ -1,15 +1,15 @@
 from setuptools import setup
 
 setup(
-    name='clover',
+    name='trefoil',
     version='0.2.2',
-    packages=['clover',
-              'clover.analysis', 'clover.cli',
-              'clover.geometry', 'clover.geometry.tests',
-              'clover.netcdf', 'clover.render',
-              'clover.render.renderers', 'clover.render.renderers.tests',
-              'clover.utilities', 'clover.utilities.tests'],
-    url='https://github.com/databasin/clover',
+    packages=['trefoil',
+              'trefoil.analysis', 'trefoil.cli',
+              'trefoil.geometry', 'trefoil.geometry.tests',
+              'trefoil.netcdf', 'trefoil.render',
+              'trefoil.render.renderers', 'trefoil.render.renderers.tests',
+              'trefoil.utilities', 'trefoil.utilities.tests'],
+    url='https://github.com/databasin/trefoil',
     license='see LICENSE',
     author='databasin',
     author_email='databasinadmin@consbio.org',
@@ -26,10 +26,10 @@ setup(
         'Numpy',
         'Pillow>=2.9.0',
         'pyproj',
-        'rasterio>=1.0a8',
+        'rasterio>=1.0a12',
     ],
     entry_points='''
         [console_scripts]
-        clover=clover.cli.main:cli
+        trefoil=trefoil.cli.main:cli
     '''
 )

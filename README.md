@@ -1,9 +1,11 @@
-# Clover
+# Trefoil  (formerly Clover)
 Because today might be your lucky day.
+
+**(note: this was renamed from `clover` on 4/20/2018 due to name conflicts on `pypi`)
 
 Geospatial operations with NetCDF files and numpy arrays.
 
-[![Build Status](https://travis-ci.org/consbio/clover.svg)](https://travis-ci.org/consbio/clover) [![Coverage Status](https://coveralls.io/repos/consbio/clover/badge.svg?branch=master&service=github)](https://coveralls.io/github/consbio/clover?branch=master)
+[![Build Status](https://travis-ci.org/consbio/trefoil.svg)](https://travis-ci.org/consbio/trefoil) [![Coverage Status](https://coveralls.io/repos/consbio/trefoil/badge.svg?branch=master&service=github)](https://coveralls.io/github/consbio/trefoil?branch=master)
 
 
 ## Why?
@@ -29,7 +31,7 @@ temporal-spatial datasets (anything more than 3 dimensions makes our heads hurt!
 We are trying to avoid reimplementing anything well-handled elsewhere.  Where 
 possible, we contribute functionality to other libraries (e.g., [rasterio](https://github.com/mapbox/rasterio))
 where we think that the functionality is general enough not to depend on
-living within clover.
+living within trefoil.
 
 
 ## Where is it being used?
@@ -49,7 +51,7 @@ Then install the remainder using `pip`
 
 ## Command line interface
 This is currently undergoing heavy development.  
-See [CLI docs](https://github.com/consbio/clover/blob/master/docs/cli.md) for more information.
+See [CLI docs](https://github.com/consbio/trefoil/blob/master/docs/cli.md) for more information.
 
 
 ## Work in progress
