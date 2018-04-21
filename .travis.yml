@@ -4,7 +4,11 @@ python:
   - "2.7"
   - "3.5"
   - "3.6"
+install:
+  - "pip install pipenv --upgrade"
+  - "pipenv install --dev --skip-lock"
+
 script:
-  - py.test --cov clover --cov-report term-missing
+  - "pipenv run py.test --cov clover --cov-report term-missing"
 after_success:
   - coveralls
