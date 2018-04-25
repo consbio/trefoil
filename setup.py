@@ -16,6 +16,8 @@ setup(
     author='databasin',
     author_email='databasinadmin@consbio.org',
     description='Useful tools for spatial analysis using numpy and NetCDF',
+    long_description_content_type='text/markdown',
+    long_description=open('README.md').read(),
     install_requires=[
         'affine>=1.0',
         'click',
