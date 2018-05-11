@@ -1,5 +1,5 @@
 import click
-from netCDF4._netCDF4 import Dataset
+from netCDF4 import Dataset
 from pyproj import Proj
 
 from trefoil.netcdf import crs
