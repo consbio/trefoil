@@ -23,7 +23,7 @@ from trefoil.netcdf.utilities import data_variables, get_fill_value
 
 
 @cli.command(short_help='Create zones in a NetCDF from features in a shapefile')
-@file_in_arg
+@click.argument('input', type=click.Path(exists=True))
 @file_out_arg
 @click.option('--variable', type=click.STRING, default='zone', help='Name of output zones variable', show_default=True)
 @click.option('--attribute', type=click.STRING, default=None, help='Name of attribute in shapefile to use for zones (default: feature ID)')
@@ -59,7 +59,7 @@ def zones(
     """
 
     with Dataset(like) as template_ds:
-        template_varname = data_variables(template_ds).keys()[0]
+        template_varname = list(data_variables(template_ds).keys())[0]
         template_variable = template_ds.variables[template_varname]
         template_crs = get_crs(template_ds, template_varname)
 

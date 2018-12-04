@@ -1,13 +1,12 @@
 # Trefoil's Command Line Interface
 
-*Note: under active development.  Expect new commands and options.*
+_Note: under active development. Expect new commands and options._
 
 Use `--help` option on any command for more information about how to use that
 command.
 
 Nearly throughout, trefoil assumes that data have a 2 dimensional geospatial
 component (y, x) and an optional temporal component.
-
 
 ```
 > trefoil --help
@@ -39,9 +38,9 @@ Commands:
 
 ## Bin time series
 
-*experimental, subject to change*
+_experimental, subject to change_
 
-`bin_ts` will bin time series data by an interval, for example, to turn an 
+`bin_ts` will bin time series data by an interval, for example, to turn an
 annual time series into a decadal time series.
 
 ```
@@ -63,15 +62,14 @@ Options:
 Example:
 `> trefoil bin_ts input.nc in_var --interval 10`
 
-Assuming input.nc has a 3rd dimension 50 steps long, this will create a new 
+Assuming input.nc has a 3rd dimension 50 steps long, this will create a new
 dataset called `input_bin.nc` in the same directory, with 5 steps, each of which
-will have the average (by default) of the values for `in_var` for each 10 step 
+will have the average (by default) of the values for `in_var` for each 10 step
 interval of the input.
-
 
 ## Calculate delta
 
-*experimental, subject to change*
+_experimental, subject to change_
 
 `delta` will calculate the delta as either a difference or proportion for each
 input file (for each time period, if they have a temporal dimension).
@@ -87,28 +85,23 @@ Options:
   --outdir TEXT   Output directory
 ```
 
-
 ## Describe a NetCDF file
 
-`describe` will produce a structured output describing attributes, dimensions, 
-and variables in this dataset, along with information about spatial and temporal 
+`describe` will produce a structured output describing attributes, dimensions,
+and variables in this dataset, along with information about spatial and temporal
 extents if they can be determined.
 
-Example: 
+Example:
 `> trefoil describe input.nc`
-
-
-
 
 ## Extract variables into new files
 
-*due for an overhaul, best to avoid using this for now*
-
+_due for an overhaul, best to avoid using this for now_
 
 ## Create a mask from a shapefile
 
-`mask` will create a NetCDF file with a binary mask created from features in a 
-shapefile.  Currently uses a template NetCDF file to determine the geospatial
+`mask` will create a NetCDF file with a binary mask created from features in a
+shapefile. Currently uses a template NetCDF file to determine the geospatial
 dimensions and projection against which to rasterize the shapefile.
 
 This is typically used to mask in areas within an area of interest, and mask out
@@ -142,12 +135,11 @@ Example:
 Will produce a mask that is `False` in all pixels covered by the shapefile's
 features, and `True` everywhere else.
 
-
 ## Rendering a NetCDF variable to images
 
-*options subject to change without notice*
+_options subject to change without notice_
 
-`render_netcdf` renders a variable into PNG files.  Several options are available
+`render_netcdf` renders a variable into PNG files. Several options are available
 to control the output.
 
 One interesting usage is with the `--map` option, which opens a Leaflet-based
@@ -226,7 +218,6 @@ Will render each time slice of each of the inputs to an image, using a blue to
 red stretched renderer (in HSV color space, by default), stretched from the
 minimum to the maximum values across all datasets.
 
-
 ## Render a NetCDF-based EEMS model to a map
 
 `map_eems` creates a Leaflet-based web map of a NetCDF-based EEMS model.  
@@ -234,8 +225,7 @@ It uses blue-yellow-red color ramp for data variables in fuzzy space, and a
 black to white color ramp for input data variables.
 
 Note: the same resampling method applies to all variables, and may not be
-appropriate for all variables.  Use `nearest` if any variables are categorical.
-
+appropriate for all variables. Use `nearest` if any variables are categorical.
 
 ```
 > trefoil map_eems --help
@@ -255,11 +245,9 @@ Options:
                                   nearest
 ```
 
-
 ## Render a GeoTIFF
 
-*likely to go away or be refactored in a major way*
-
+_likely to go away or be refactored in a major way_
 
 ## Display statistics for NetCDF variables
 
@@ -269,7 +257,6 @@ a series of files.
 Variables can be input as a comma-delimited list.
 
 Can be optionally masked.
-
 
 ```
 > trefoil stats --help
@@ -286,19 +273,17 @@ Options:
 Example:
 `> trefoil stats input.nc in_var1,in_var2`
 
-
 ## Convert rasters to NetCDF
 
 `to_netcdf` will convert from any raster that can be read with `rasterio`
 into a NetCDF file with appropriate geospatial dimensions, and optional
-temporal dimension.  It will automatically infer data type and coordinate
-reference system, if possible.  It currently uses the Python
+temporal dimension. It will automatically infer data type and coordinate
+reference system, if possible. It currently uses the Python
 [strptime](https://docs.python.org/2/library/datetime.html#strftime-and-strptime-behavior)
 format for parsing dates, but limited to 2 and 4 digit years only (`%Y` and `%y`).
 
 A common use case is to convert a series of ArcASCII files into a NetCDF
 file with geospatial and temporal dimensions.
-
 
 ```
 > trefoil to_netcdf --help
@@ -345,8 +330,8 @@ Example:
 
 Will produce a NetCDF file with longitude and latitude dimensions, and a Z
 dimension that is of the same size as the number of files that meet the filename
-pattern.  Files are stacked in the order they are listed in the directory
-(alphabetically).  The data variable `my_var` will contain the data read from
+pattern. Files are stacked in the order they are listed in the directory
+(alphabetically). The data variable `my_var` will contain the data read from
 the ArcASCII files, converted to unsigned 8 bit integers.
 
 `> trefoil to_netcdf inputs_%Y.asc output.nc my_var --dtype uint8 --src-crs EPSG:4326`
@@ -356,7 +341,6 @@ years and add those to a temporal dimension and coordinate variable, stored
 according to CF conventions (in days since the first year of the series, based
 on the input calendar).
 
-
 ## List variables in a NetCDF file
 
 `variables` lists the data and coordinate variables within the NetCDF dataset.
@@ -364,14 +348,12 @@ on the input calendar).
 Example:
 `> trefoil variables input.nc`
 
-
 ## Reproject a variable in a NetCDF file
 
 `warp` will reproject one or more data variables in a NetCDF file to a new
-coordinate reference system, using a template dataset to establish the 
-geospatial domain for output.  Files will be given the same name as the inputs
+coordinate reference system, using a template dataset to establish the
+geospatial domain for output. Files will be given the same name as the inputs
 in the output directory.
-
 
 ```
 > trefoil warp --help
@@ -393,10 +375,9 @@ Options:
 Example:
 `> trefoil warp input_geographic.nc output --like template_mercator.nc`
 
-
 ## Calculate zonal statistics on a series of NetCDF files
 
-`zonal_stats` will use zones created by the `zones` command to create zonal 
+`zonal_stats` will use zones created by the `zones` command to create zonal
 statistics for a one or more variables in one or more NetCDF files.
 
 ```
@@ -429,6 +410,7 @@ JSON output is a nested data structure, that varies in depth based on
 presence of a 3rd dimension.
 
 2 dimensions:
+
 ```
 {
     "filename": {
@@ -442,6 +424,7 @@ presence of a 3rd dimension.
 ```
 
 3 dimensions:
+
 ```
 {
     "filename": {
@@ -456,22 +439,21 @@ presence of a 3rd dimension.
 }
 ```
 
-
 ## Create zones based on features
 
 `zones` creates zones in a NetCDF file using features from a shapefile and
 a template raster to determine the spatial context.
 
-Currently zones are represented as a single, 2D variable.  This means that
+Currently zones are represented as a single, 2D variable. This means that
 assignment of pixels (esp. large pixels) to features is determined by
 GDAL's internal algorithms, and does not make this determination based on the
-maximum area of overlap (as is done in other GIS platforms).  We recommend
-caution and inspection of outputs when using this for small features and large 
+maximum area of overlap (as is done in other GIS platforms). We recommend
+caution and inspection of outputs when using this for small features and large
 pixels.
 
 Note: because a values lookup is used to control the output data type, and allow
 use of string attributes for zones, the data in the zone variable is simply
-an integer lookup.  Do not expect to pull this into a GIS and compare values
+an integer lookup. Do not expect to pull this into a GIS and compare values
 to the original features.
 
 ```
@@ -503,3 +485,6 @@ Options:
   --netcdf3         Output in NetCDF3 version instead of NetCDF4
   --zip             Use zlib compression of data and coordinate variables
 ```
+
+Example:
+`> trefoil zones --like trefoil/test_data/tmin.nc trefoil/test_data/tmin_zones/tmin_zones.shp zones.nc`
