@@ -28,6 +28,7 @@ Commands:
   mask           Create a NetCDF mask from a shapefile
   render_netcdf  Render netcdf files to images
   render_tif     Render Single-Band GeoTIFF files to images
+  set_crs        Set CRS information for variables in a dataset
   stats          Display statistics for variables within netCDF files
   to_netcdf      Convert rasters to NetCDF
   variables      List variables in netCDF file
@@ -248,6 +249,20 @@ Options:
 ## Render a GeoTIFF
 
 _likely to go away or be refactored in a major way_
+
+## Set CRS information for NetCDF variables
+
+`set_crs` sets coordinate reference (CRS) information for one or more 
+variables in a dataset.
+
+```
+> trefoil set_crs --help
+Usage: trefoil set_crs [OPTIONS] FILENAME PROJ4
+
+Options:
+--only TEXT  Set CRS only for the specified variables
+--help       Show this message and exit.
+```
 
 ## Display statistics for NetCDF variables
 
