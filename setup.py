@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='trefoil',
-    version='0.3.1',
+    version='0.3.1.1',
     packages=['trefoil',
               'trefoil.analysis', 'trefoil.cli',
               'trefoil.geometry', 'trefoil.geometry.tests',
@@ -11,7 +11,7 @@ setup(
               'trefoil.utilities', 'trefoil.utilities.tests',
               # for temporary backward compatibility only!  Will be removed in near future
               'clover'],
-    url='https://github.com/databasin/trefoil',
+    url='https://github.com/consbio/trefoil',
     license='see LICENSE',
     author='databasin',
     author_email='databasinadmin@consbio.org',
