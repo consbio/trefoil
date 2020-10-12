@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='trefoil',
-    version='0.3.1.1',
+    version='0.3.2',
     packages=['trefoil',
               'trefoil.analysis', 'trefoil.cli',
               'trefoil.geometry', 'trefoil.geometry.tests',
