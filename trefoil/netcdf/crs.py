@@ -196,8 +196,9 @@ def set_crs(dataset, variable_name, projection, set_proj4_att=False):
     if set_proj4_att:
         variable.setncattr(PROJ4_KEY, proj_string)
 
-    proj_data = CRS.from_string(proj_string).to_dict()
-    proj_key = proj_data['proj']
+    proj = CRS.from_string(proj_string)
+    proj_data = proj.to_dict()
+    proj_key = 'latlong' if not proj.is_projected else proj_data['proj']
     if not proj_key in PROJ4_CF_PARAM_MAP.keys():
         raise ValueError('CF Convention mapping is not yet available for projection {0}'.format(proj_key))
 
