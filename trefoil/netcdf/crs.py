@@ -10,10 +10,16 @@ https://github.com/NCPP/ocgis/blob/master/src/ocgis/interface/base/crs.py
 import logging
 import os
 import re
-from pyproj import Proj, pj_list, pj_ellps, pyproj_datadir
+from pyproj import Proj, pj_list, pj_ellps
 
 from trefoil.netcdf.utilities import get_ncattrs, set_ncattrs
 from rasterio.crs import CRS
+
+try:
+    from pyproj import pyproj_datadir
+except ImportError:
+    from pyproj import datadir
+    pyproj_datadir = datadir.get_data_dir()
 
 
 PROJ4_GEOGRAPHIC = '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs'
