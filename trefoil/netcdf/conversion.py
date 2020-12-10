@@ -45,7 +45,13 @@ def raster_to_netcdf(filename_or_raster, outfilename=None, variable_name='data',
 
     outfilename = outfilename or src.name + '.nc'
     with Dataset(outfilename, 'w', format=format) as target:
-        if prj.is_latlong():
+        # `.is_latlong` was removed in pyproj 2.2
+        try:
+            is_latlong = prj.is_latlong()
+        except AttributeError:
+            is_latlong = prj.crs.is_geographic
+
+        if is_latlong:
             x_varname = 'longitude'
             y_varname = 'latitude'
         else:

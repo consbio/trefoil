@@ -356,7 +356,13 @@ class SpatialCoordinateVariables(object):
         y_var.setncattr('axis', 'Y')
 
         if self.projection:
-            if self.projection.is_latlong():
+            # `.is_latlong` was removed in pyproj 2.2
+            try:
+                is_latlong = self.projection.is_latlong()
+            except AttributeError:
+                is_latlong = self.projection.crs.is_geographic
+
+            if is_latlong:
                 x_var.setncattr('standard_name', 'longitude')
                 x_var.setncattr('long_name', 'longitude')
                 x_var.setncattr('units', 'degrees_east')

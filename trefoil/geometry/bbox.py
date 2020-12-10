@@ -60,7 +60,11 @@ class BBox(object):
         return info
 
     def is_geographic(self):
-        return self.projection.is_latlong()
+        # `.is_latlong` was removed in pyproj 2.2
+        try:
+            return self.projection.is_latlong()
+        except AttributeError:
+            return self.projection.crs.is_geographic
 
     def project(self, target_projection, edge_points=9):
         """
