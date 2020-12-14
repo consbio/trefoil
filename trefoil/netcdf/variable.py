@@ -9,6 +9,7 @@ from pyproj import Proj
 import six
 
 from trefoil.geometry.bbox import BBox
+from trefoil.utilities.proj import is_latlong
 from trefoil.utilities.window import Window
 from trefoil.netcdf.utilities import get_ncattrs
 from trefoil.netcdf.crs import PROJ4_GEOGRAPHIC
@@ -356,13 +357,7 @@ class SpatialCoordinateVariables(object):
         y_var.setncattr('axis', 'Y')
 
         if self.projection:
-            # `.is_latlong` was removed in pyproj 2.2
-            try:
-                is_latlong = self.projection.is_latlong()
-            except AttributeError:
-                is_latlong = self.projection.crs.is_geographic
-
-            if is_latlong:
+            if is_latlong(self.projection):
                 x_var.setncattr('standard_name', 'longitude')
                 x_var.setncattr('long_name', 'longitude')
                 x_var.setncattr('units', 'degrees_east')

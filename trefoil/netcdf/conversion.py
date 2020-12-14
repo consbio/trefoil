@@ -11,6 +11,7 @@ from trefoil.netcdf.variable import SpatialCoordinateVariables
 from trefoil.geometry.bbox import BBox
 from trefoil.netcdf.crs import get_crs
 from trefoil.utilities.conversion import array_to_raster
+from trefoil.utilities.proj import is_latlong
 
 
 def raster_to_netcdf(filename_or_raster, outfilename=None, variable_name='data', format='NETCDF4', **kwargs):
@@ -45,13 +46,7 @@ def raster_to_netcdf(filename_or_raster, outfilename=None, variable_name='data',
 
     outfilename = outfilename or src.name + '.nc'
     with Dataset(outfilename, 'w', format=format) as target:
-        # `.is_latlong` was removed in pyproj 2.2
-        try:
-            is_latlong = prj.is_latlong()
-        except AttributeError:
-            is_latlong = prj.crs.is_geographic
-
-        if is_latlong:
+        if is_latlong(prj):
             x_varname = 'longitude'
             y_varname = 'latitude'
         else:
