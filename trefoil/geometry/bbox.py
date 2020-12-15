@@ -3,6 +3,8 @@ from itertools import product
 from pyproj import Proj, transform
 from six import text_type
 
+from trefoil.utilities.proj import is_latlong
+
 
 class BBox(object):
     """
@@ -60,7 +62,7 @@ class BBox(object):
         return info
 
     def is_geographic(self):
-        return self.projection.is_latlong()
+        return is_latlong(self.projection)
 
     def project(self, target_projection, edge_points=9):
         """
