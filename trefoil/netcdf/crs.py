@@ -13,7 +13,7 @@ import re
 from pyproj import Proj, pj_list, pj_ellps
 
 from trefoil.netcdf.utilities import get_ncattrs, set_ncattrs
-from rasterio.crs import CRS
+from pyproj import CRS
 
 # pyproj 2 drops `pyproj_datadir` in favor of `datadir.get_data_dir()`
 try:
