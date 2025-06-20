@@ -34,7 +34,6 @@ def test_get_crs(tmpdir):
 
     out_data = CRS.from_string(out_proj4).to_dict()
 
-    # assert len(out_data) == 8  # There should be 8 parameters
     assert CRS.from_string(in_proj4).to_dict() == out_data
 
     # Test WGS84 lat/long
@@ -56,7 +55,6 @@ def test_get_crs(tmpdir):
 
     out_data = CRS.from_string(out_proj4).to_dict()
 
-    # assert len(out_data) == 4  # There should be 4 parameters
     # Note: pyproj adds units=m even for latlong, which is incorrect but not our problem
     assert CRS.from_string(in_proj4 + ' +units=m').to_dict() == out_data
 
@@ -152,9 +150,6 @@ def test_utm(tmpdir):
     out_proj4 = get_crs(ds, 'data')
 
     out_data = CRS.from_string(out_proj4).to_dict()
-
-    # ESPG will have been converted to long form
-    # assert len(out_data) == 6
 
     expected = {
         u'zone': 10,
