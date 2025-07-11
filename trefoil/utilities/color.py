@@ -165,7 +165,7 @@ def hsv_to_rgb(colors):
     rgb = numpy.zeros_like(colors)
     r, g, b = rgb.T
 
-    i = (h * 6.0).astype(numpy.int_)
+    i = (h * 6.0).astype(int)
     f = (h * 6.0) - i
     p = v * (1.0 - s)
     q = v * (1.0 - s * f)
