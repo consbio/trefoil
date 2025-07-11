@@ -112,7 +112,7 @@ class StretchedRenderer(RasterRenderer):
         values = self._mask_fill_value(data.ravel())
 
         # derive palette index, and clip to [0, num_colors - 1]
-        stretched = ((values - self.min_value) * factor).astype(numpy.int)
+        stretched = ((values - self.min_value) * factor).astype(int)
         image_data = stretched.clip(0, num_colors - 1).astype(numpy.uint8)
 
         # have to invert dimensions because PIL thinks about this backwards

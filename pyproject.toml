@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "trefoil"
+version = "0.4.0"
+description = "Geospatial operations with NetCDF files and numpy arrays."
+authors = ["Conservation Biology Institute"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.12"
+affine = ">=1.0"
+click = "*"
+jinja2 = "*"
+palettable = "*"
+pytz = "*"
+fiona = ">=1.6.0"
+netcdf4 = ">=1.1.1"
+numpy = "*"
+pyproj = "*"
+rasterio = "^1.4.3"
+pillow = "^9.0.1"
+six = "^1.17.0"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-cov = "*"
+wheel = "*"
+twine = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

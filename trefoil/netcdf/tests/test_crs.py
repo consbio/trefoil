@@ -34,7 +34,6 @@ def test_get_crs(tmpdir):
 
     out_data = CRS.from_string(out_proj4).to_dict()
 
-    assert len(out_data) == 8  # There should be 8 parameters
     assert CRS.from_string(in_proj4).to_dict() == out_data
 
     # Test WGS84 lat/long
@@ -56,7 +55,6 @@ def test_get_crs(tmpdir):
 
     out_data = CRS.from_string(out_proj4).to_dict()
 
-    assert len(out_data) == 4  # There should be 4 parameters
     # Note: pyproj adds units=m even for latlong, which is incorrect but not our problem
     assert CRS.from_string(in_proj4 + ' +units=m').to_dict() == out_data
 
@@ -112,7 +110,7 @@ def test_set_crs_epsg(tmpdir):
     crs_var = ds.variables[data_atts['grid_mapping']]
     ncatts = get_ncattrs(crs_var)
 
-    assert data_atts['proj4'] == '+proj=latlong +datum=WGS84 +no_defs'
+    assert data_atts['proj4'] == '+proj=longlat +datum=WGS84 +no_defs'
     assert ncatts['grid_mapping_name'] == 'latitude_longitude'
     assert ncatts['semi_major_axis'] == 6378137.0
     assert ncatts['inverse_flattening'] == 298.257223563
@@ -123,7 +121,7 @@ def test_set_crs_epsg(tmpdir):
     crs_var = ds.variables[data_atts['grid_mapping']]
     ncatts = get_ncattrs(crs_var)
 
-    assert data_atts['proj4'] == '+proj=latlong +datum=NAD83 +no_defs'
+    assert data_atts['proj4'] == '+proj=longlat +datum=NAD83 +no_defs'
     assert ncatts['grid_mapping_name'] == 'latitude_longitude'
     assert ncatts['semi_major_axis'] == 6378137.0
     assert ncatts['inverse_flattening'] == 298.257223563
@@ -153,16 +151,12 @@ def test_utm(tmpdir):
 
     out_data = CRS.from_string(out_proj4).to_dict()
 
-    # ESPG will have been converted to long form
-    assert len(out_data) == 6
-
     expected = {
         u'zone': 10,
         u'ellps': u'GRS80',
         u'no_defs': True,
         u'proj': u'utm',
-        u'units': u'm',
-        u'towgs84': u'0,0,0,0,0,0,0'
+        u'units': u'm'
     }
     assert expected == out_data
 

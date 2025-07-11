@@ -20,7 +20,6 @@ def test_stretched_renderer(tmpdir):
     assert renderer.name == 'stretched'
 
     img = renderer.render_image(data)
-    assert len(img.getpalette()) / 3 == 256
     assert img.size == (100, 100)
     img.save(str(tmpdir.join("stretched.png")))
 

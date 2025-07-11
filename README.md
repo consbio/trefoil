@@ -41,17 +41,20 @@ Django-based NetCDF map server.
 We are using this on a variety of internal projects within the Conservation
 Biology Institute.
 
-
 ## Installation
-[pipenv](https://github.com/pypa/pipenv) is used for managing dependencies in this project.
+Trefoil is available on PyPi. To install, use:
 
-`pipenv install trefoil`
+```text
+$ pip install trefoil
+```
 
+## Development
+[Poetry](https://python-poetry.org/docs/) is used for managing dependencies in this project.
+To develop this project, install its dependencies with:
 
-### No longer directly maintained / supported:
-On Windows, install the ones that require compiling from [Python Windows Packages](http://www.lfd.uci.edu/~gohlke/pythonlibs/).
-Then install the remainder using `pip`
-
+``` text
+$ poetry install
+```
 
 ## Command line interface
 This is currently undergoing heavy development.  

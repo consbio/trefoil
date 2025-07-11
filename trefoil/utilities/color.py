@@ -124,7 +124,7 @@ def rgb_to_hsv(colors):
     colors = colors / 255.0
     hsv = numpy.zeros_like(colors)
     vmax = colors.max(-1)
-    vrange = colors.ptp(-1)
+    vrange = numpy.ptp(colors, axis=-1)
     vmax_ge_zero = vmax > 0
     s = numpy.zeros_like(vmax)
     s[vmax_ge_zero] = vrange[vmax_ge_zero] / vmax[vmax_ge_zero]
@@ -165,7 +165,7 @@ def hsv_to_rgb(colors):
     rgb = numpy.zeros_like(colors)
     r, g, b = rgb.T
 
-    i = (h * 6.0).astype(numpy.int)
+    i = (h * 6.0).astype(int)
     f = (h * 6.0) - i
     p = v * (1.0 - s)
     q = v * (1.0 - s * f)
