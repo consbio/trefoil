@@ -3,7 +3,7 @@ import importlib
 import click
 import os
 import numpy
-from PIL.Image import ANTIALIAS
+from PIL.Image import Resampling
 from pyproj import Proj
 from netCDF4 import Dataset
 
@@ -19,7 +19,7 @@ def render_image(renderer, data, filename, scale=1, flip_y=False, format='png'):
 
     img = renderer.render_image(data)
     if scale != 1:
-        img = img.resize((numpy.array(data.shape[::-1]) * scale).astype(numpy.uint), ANTIALIAS)
+        img = img.resize((numpy.array(data.shape[::-1]) * scale).astype(numpy.uint), Resampling.LANCZOS)
 
     kwargs = {}
     if format == 'png':

@@ -14,7 +14,7 @@ import glob
 import click
 import json
 import numpy
-from PIL.Image import ANTIALIAS, NEAREST
+from PIL.Image import Resampling
 from pyproj import Proj
 
 import rasterio
@@ -97,9 +97,9 @@ def render_image(renderer, data, filename, scale=1, reproject_kwargs=None):
             data = numpy.ma.masked_array(out, mask=out == data.fill_value)
 
 
-    resampling = ANTIALIAS
+    resampling = Resampling.LANCZOS
     if renderer.name == 'unique':
-        resampling = NEAREST
+        resampling = Resampling.NEAREST
 
     img = renderer.render_image(data)
     if scale != 1:

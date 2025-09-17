@@ -1,4 +1,5 @@
 from PIL import Image
+from PIL.Image import Resampling
 import numpy
 
 from trefoil.utilities.format import PrecisionFormatter
@@ -93,7 +94,7 @@ class StretchedRenderer(RasterRenderer):
             else:
                 legend_values = numpy.linspace(self.min_value, self.max_value, image_height)
                 return [LegendElement(
-                    self.render_image(numpy.array([legend_values,]).T[::-1]).resize((image_width, image_height), Image.ANTIALIAS),
+                    self.render_image(numpy.array([legend_values,]).T[::-1]).resize((image_width, image_height), Resampling.LANCZOS),
                     tick_positions,
                     labels
                 )]
