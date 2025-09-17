@@ -17,7 +17,7 @@ netcdf4 = ">=1.1.1"
 numpy = "*"
 pyproj = "*"
 rasterio = "^1.4.3"
-pillow = "^9.0.1"
+pillow = ">=9.0.1,<11.0.0"
 six = "^1.17.0"
 
 
