@@ -25,7 +25,6 @@ six = "^1.17.0"
 pytest = "*"
 pytest-cov = "*"
 wheel = "*"
-twine = "*"
 
 [build-system]
 requires = ["poetry-core"]
