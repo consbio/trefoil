@@ -47,8 +47,8 @@ def describe(path_or_dataset):
     for variable_name in dataset.variables:
         variable = dataset.variables[variable_name]
 
-        if not variable.dimensions:
-            # Do not collect info about dimensionless variables (e.g., CRS variable)
+        # Do not collect info about dimensionless variables (e.g., CRS variable)
+        if not variable.dimensions or variable.size == 0:
             continue
 
         dtype = str(variable.dtype)
