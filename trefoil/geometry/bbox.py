@@ -53,10 +53,10 @@ class BBox(object):
         return copy.copy(self)
 
     def as_list(self):
-        return [getattr(self, key) for key in ("xmin", "ymin", "xmax", "ymax")]
+        return [convert_extent_coord_to_float(getattr(self, key)) for key in ("xmin", "ymin", "xmax", "ymax")]
 
     def as_dict(self):
-        info = {key: getattr(self, key) for key in ("xmin", "ymin", "xmax", "ymax")}
+        info = {key: convert_extent_coord_to_float(getattr(self, key)) for key in ("xmin", "ymin", "xmax", "ymax")}
         if self.projection:
             info['proj4'] = self.projection.srs
         return info
@@ -113,6 +113,11 @@ class BBox(object):
                     lon_0=((geo_bbox.xmax-geo_bbox.xmin)/2.0) + geo_bbox.xmin,
                     x_0=0, y_0=0, ellps='WGS84', datum='WGS84', units='m', no_defs=True)
 
+def convert_extent_coord_to_float(value):
+    if hasattr(value, 'item'):
+        return value.item()
+    else:
+        return value
 
 def union_bbox(bboxes):
     """
